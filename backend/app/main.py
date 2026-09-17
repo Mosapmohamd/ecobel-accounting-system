@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from . import models
 from .database import engine
-from .routers import auth_router, products, inventory
+from .routers import auth_router, products, inventory, b2b
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -25,6 +25,7 @@ app.add_middleware(
 app.include_router(auth_router.router)
 app.include_router(products.router)
 app.include_router(inventory.router)
+app.include_router(b2b.router)
 
 
 @app.get("/")
