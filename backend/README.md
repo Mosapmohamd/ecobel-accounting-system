@@ -59,6 +59,55 @@ alembic downgrade -1                               # roll back one migration
 targets whichever database (SQLite locally, PostgreSQL in production) is
 configured in `.env` — no separate config to keep in sync.
 
+Migrations here use their own tracking table, `alembic_version_accounting`
+(not Alembic's default `alembic_version`) — see "Sharing a database with
+ecobel-website" below for why.
+
+## Sharing a database with ecobel-website
+
+[ecobel-website](https://github.com/Mosapmohamd/ecobel-website) reads and
+writes this service's `categories`, `products`, `inventory_movements`, and
+`finance_entries` tables directly — same `DATABASE_URL` in both `.env`
+files, same database. See that repo's README for the full rationale.
+
+**Local development, quickest option — one shared SQLite file:**
+
+Point *both* services' `DATABASE_URL` at the exact same file path (an
+absolute path, so it resolves the same regardless of which repo's folder
+you run the command from):
+
+```bash
+# in both backend/.env files:
+DATABASE_URL=sqlite:////absolute/path/to/a/shared/ecobel_shared_dev.db
+```
+
+(On Windows: `sqlite:///C:/path/to/ecobel_shared_dev.db`.)
+
+Then run **this service's** migration first (it creates the shared
+tables), and ecobel-website's migration second (its tables reference
+`products` via foreign key, so the shared tables need to exist first —
+SQLite won't always complain if you get the order wrong, but PostgreSQL
+will):
+
+```bash
+cd ecobel-accounting-system/backend && alembic upgrade head
+cd ../../ecobel-website/backend && alembic upgrade head
+```
+
+Both services can now run against that one file and will see each
+other's writes immediately (verified: a product created via this
+service's `/products` API shows up right away in ecobel-website's
+`/catalog/products`).
+
+**Production** works the same way conceptually, just with a real
+PostgreSQL database instead of a SQLite file — same `DATABASE_URL` in
+both services' environments, same migration order (this service first).
+
+Each service uses its own Alembic tracking table
+(`alembic_version_accounting` / `alembic_version_website`) specifically
+so the two independent migration histories can coexist in one database
+without colliding on Alembic's default table name.
+
 ## Project layout
 
 ```
