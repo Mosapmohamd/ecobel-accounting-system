@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import models
-from .database import engine
 from .routers import auth_router, categories, products, inventory, b2b, free_distribution, finance, reports
 
-models.Base.metadata.create_all(bind=engine)
+# Schema is now managed by Alembic migrations (see alembic/ and the README) —
+# run `alembic upgrade head` before starting the server instead of relying
+# on create_all, so existing tables get altered in place rather than
+# silently skipped.
 
 app = FastAPI(
     title="Eco Bel — Accounting & Inventory System",

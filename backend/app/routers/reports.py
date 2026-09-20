@@ -49,15 +49,11 @@ def dashboard_summary(period: Period = "today", db: Session = Depends(get_db)):
         .filter(models.FinanceEntry.entry_date >= start)
         .scalar()
     )
-    b2b_row = (
-        db.query(
-            func.coalesce(func.sum(models.B2BOrder.total_amount), 0),
-            func.coalesce(func.sum(models.B2BOrder.total_profit), 0),
-        )
+    period_b2b_sales = float(
+        db.query(func.coalesce(func.sum(models.B2BOrder.total_amount), 0))
         .filter(models.B2BOrder.created_at >= start)
-        .first()
+        .scalar() or 0
     )
-    period_b2b_sales, period_profit = float(b2b_row[0] or 0), float(b2b_row[1] or 0)
 
     dist_row = (
         db.query(
@@ -78,7 +74,6 @@ def dashboard_summary(period: Period = "today", db: Session = Depends(get_db)):
         period_income=float(period_income or 0),
         period_expense=float(period_expense or 0),
         period_b2b_sales=period_b2b_sales,
-        period_profit=period_profit,
         free_distribution_events=dist_events,
         free_distribution_pieces=dist_pieces,
     )

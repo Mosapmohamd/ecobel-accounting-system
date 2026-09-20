@@ -41,7 +41,6 @@ class ProductCreate(BaseModel):
     name: str
     category_id: str
     sku: Optional[str] = None
-    cost_price: float = 0
     sale_price: float = 0
     quantity: int = 0
     low_stock_threshold: int = 10
@@ -51,7 +50,6 @@ class ProductUpdate(BaseModel):
     name: Optional[str] = None
     category_id: Optional[str] = None
     sku: Optional[str] = None
-    cost_price: Optional[float] = None
     sale_price: Optional[float] = None
     low_stock_threshold: Optional[int] = None
     is_active: Optional[bool] = None
@@ -64,7 +62,6 @@ class ProductOut(BaseModel):
     category_id: str
     category_name: str
     sku: Optional[str]
-    cost_price: float
     sale_price: float
     quantity: int
     low_stock_threshold: int
@@ -132,10 +129,8 @@ class B2BOrderItemOut(BaseModel):
     product_id: str
     quantity: int
     unit_price: float
-    cost_price: float
     discount_percentage: float
     line_total: float
-    line_profit: float
 
 
 class B2BOrderOut(BaseModel):
@@ -143,7 +138,6 @@ class B2BOrderOut(BaseModel):
     id: str
     customer_id: str
     total_amount: float
-    total_profit: float
     note: Optional[str]
     created_at: datetime
     items: List[B2BOrderItemOut]
@@ -207,7 +201,6 @@ class DashboardSummary(BaseModel):
     period_income: float
     period_expense: float
     period_b2b_sales: float
-    period_profit: float              # gross profit from B2B sales in the period (revenue - cost of goods)
     free_distribution_events: int     # number of distribution records in the period
     free_distribution_pieces: int     # total units given away as samples in the period
 

@@ -53,7 +53,6 @@ class Product(Base):
     name = Column(String, nullable=False)
     category_id = Column(String, ForeignKey("categories.id"), nullable=False)
     sku = Column(String, unique=True, nullable=True)
-    cost_price = Column(Float, nullable=False, default=0)      # سعر التكلفة
     sale_price = Column(Float, nullable=False, default=0)      # سعر البيع للمستهلك
     quantity = Column(Integer, nullable=False, default=0)      # الكمية الحالية بالمخزن
     low_stock_threshold = Column(Integer, nullable=False, default=10)
@@ -124,7 +123,6 @@ class B2BOrder(Base):
     id = Column(String, primary_key=True, default=gen_id)
     customer_id = Column(String, ForeignKey("b2b_customers.id"), nullable=False)
     total_amount = Column(Float, nullable=False, default=0)  # after customer's discount
-    total_profit = Column(Float, nullable=False, default=0)  # total_amount minus cost of goods sold
     note = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=now)
 
@@ -140,16 +138,11 @@ class B2BOrderItem(Base):
     product_id = Column(String, ForeignKey("products.id"), nullable=False)
     quantity = Column(Integer, nullable=False)
     unit_price = Column(Float, nullable=False)          # product.sale_price at time of order
-    cost_price = Column(Float, nullable=False, default=0)  # product.cost_price at time of order (for profit calc)
     discount_percentage = Column(Float, nullable=False)  # copied from customer at time of order
     line_total = Column(Float, nullable=False)           # unit_price * qty * (1 - discount)
 
     order = relationship("B2BOrder", back_populates="items")
     product = relationship("Product")
-
-    @property
-    def line_profit(self) -> float:
-        return self.line_total - (self.cost_price * self.quantity)
 
 
 # ---------------------------------------------------------------------------
