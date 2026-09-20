@@ -74,8 +74,8 @@ export default function DashboardPage() {
               <div className="value">{money(summary.period_expense)}</div>
             </div>
             <div className="kpi-card">
-              <div className="label">صافي ربح مبيعات الجملة B2B</div>
-              <div className="value" style={{ color: 'var(--ok)' }}>{money(summary.period_profit)}</div>
+              <div className="label">مبيعات الجملة B2B</div>
+              <div className="value" style={{ color: 'var(--ok)' }}>{money(summary.period_b2b_sales)}</div>
             </div>
             <div className="kpi-card">
               <div className="label">منتجات محتاجة انتباه</div>

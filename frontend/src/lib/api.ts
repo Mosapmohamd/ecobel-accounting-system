@@ -40,7 +40,6 @@ export interface Product {
   category_id: string;
   category_name: string;
   sku: string | null;
-  cost_price: number;
   sale_price: number;
   quantity: number;
   low_stock_threshold: number;
@@ -62,17 +61,14 @@ export interface B2BOrderItem {
   product_id: string;
   quantity: number;
   unit_price: number;
-  cost_price: number;
   discount_percentage: number;
   line_total: number;
-  line_profit: number;
 }
 
 export interface B2BOrder {
   id: string;
   customer_id: string;
   total_amount: number;
-  total_profit: number;
   note: string | null;
   created_at: string;
   items: B2BOrderItem[];
@@ -111,7 +107,6 @@ export interface DashboardSummary {
   period_income: number;
   period_expense: number;
   period_b2b_sales: number;
-  period_profit: number;
   free_distribution_events: number;
   free_distribution_pieces: number;
 }
