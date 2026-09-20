@@ -1,5 +1,6 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from .. import models, schemas, auth
@@ -29,9 +30,22 @@ def create_product(payload: schemas.ProductCreate, db: Session = Depends(get_db)
     if not category:
         raise HTTPException(404, "الفئة غير موجودة")
     if payload.sku:
-        existing = db.query(models.Product).filter(models.Product.sku == payload.sku).first()
-        if existing:
+        existing_sku = db.query(models.Product).filter(models.Product.sku == payload.sku).first()
+        if existing_sku:
             raise HTTPException(400, "SKU مستخدم بالفعل لمنتج آخر")
+
+    # Prevent two active products with the same name in the same category —
+    # the practical definition of "the same product" here.
+    duplicate = (
+        db.query(models.Product)
+        .filter(models.Product.is_active == True)  # noqa: E712
+        .filter(models.Product.category_id == payload.category_id)
+        .filter(func.lower(func.trim(models.Product.name)) == payload.name.strip().lower())
+        .first()
+    )
+    if duplicate:
+        raise HTTPException(400, "منتج بنفس الاسم موجود بالفعل في نفس الفئة")
+
     product = models.Product(**payload.model_dump())
     db.add(product)
     db.commit()
@@ -56,6 +70,20 @@ def update_product(product_id: str, payload: schemas.ProductUpdate, db: Session 
     if "category_id" in data and data["category_id"]:
         if not db.get(models.Category, data["category_id"]):
             raise HTTPException(404, "الفئة غير موجودة")
+
+    new_name = data.get("name", product.name)
+    new_category_id = data.get("category_id", product.category_id)
+    duplicate = (
+        db.query(models.Product)
+        .filter(models.Product.id != product.id)
+        .filter(models.Product.is_active == True)  # noqa: E712
+        .filter(models.Product.category_id == new_category_id)
+        .filter(func.lower(func.trim(models.Product.name)) == new_name.strip().lower())
+        .first()
+    )
+    if duplicate:
+        raise HTTPException(400, "منتج بنفس الاسم موجود بالفعل في نفس الفئة")
+
     for field, value in data.items():
         setattr(product, field, value)
     db.commit()

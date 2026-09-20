@@ -19,13 +19,16 @@ For local development without PostgreSQL installed, just leave
 `DATABASE_URL` unset — it falls back to a local SQLite file automatically.
 For production, point `DATABASE_URL` at your PostgreSQL instance.
 
-Create the first (and only, for now) user:
+Create the database schema (via Alembic — see below), then create the
+first (and only, for now) user:
 
 ```bash
+alembic upgrade head
 python create_admin.py admin "your-password"
 ```
 
-Optionally seed sample data (2 categories + 10 products) for demos/testing:
+Optionally seed sample data (3 categories, 20 products, and ~18 months of
+simulated B2B sales history) for demos/testing:
 
 ```bash
 python seed_data.py
@@ -38,6 +41,23 @@ uvicorn app.main:app --reload
 ```
 
 Interactive API docs: http://localhost:8000/docs
+
+## Database migrations (Alembic)
+
+Schema changes are managed with Alembic, not `create_all` — this lets a
+change to `models.py` become a migration that *alters* the existing table
+in place, instead of requiring the database to be wiped every time (fine
+in early development, not an option once real client data exists).
+
+```bash
+alembic upgrade head                              # apply all pending migrations
+alembic revision --autogenerate -m "description"  # after changing models.py
+alembic downgrade -1                               # roll back one migration
+```
+
+`alembic/env.py` reads `DATABASE_URL` the same way the app does, so it
+targets whichever database (SQLite locally, PostgreSQL in production) is
+configured in `.env` — no separate config to keep in sync.
 
 ## Project layout
 
@@ -54,7 +74,7 @@ app/
   routers/
     auth_router.py     POST /auth/login
     categories.py         /categories — dynamic product categories (list/create)
-    products.py         /products — CRUD
+    products.py         /products — CRUD (rejects duplicate name+category)
     inventory.py         /inventory — manual restock/adjustment, movement log
     b2b.py                 /b2b/customers, /b2b/orders — automatic discount
                           calculation, stock deduction, auto finance entry
@@ -62,6 +82,9 @@ app/
                           no revenue
     finance.py            /finance/entries — manual income/expense entries
     reports.py             /reports/dashboard, /reports/monthly-sales
+alembic/
+  env.py               Migration environment — wired to app.models + DATABASE_URL
+  versions/            Migration scripts (generated via `alembic revision --autogenerate`)
 ```
 
 ## Key business rules encoded here
@@ -79,6 +102,8 @@ app/
   visible in inventory reports, not sales reports.
 - **Products are soft-deleted** (`is_active = False`), never hard-deleted,
   since past order items and movements reference them.
+- **No two active products can share the same name within the same
+  category** — enforced on both create and edit.
 
 ## Not yet wired up (future work)
 
