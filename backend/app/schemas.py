@@ -2,7 +2,19 @@ from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, ConfigDict, Field
 
-from .models import ProductCategory, MovementType, RecipientType, FinanceEntryType
+from .models import MovementType, RecipientType, FinanceEntryType
+
+
+# ---------------- Categories ----------------
+class CategoryCreate(BaseModel):
+    name: str
+
+
+class CategoryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    name: str
+    created_at: datetime
 
 
 # ---------------- Auth ----------------
@@ -27,7 +39,7 @@ class UserOut(BaseModel):
 # ---------------- Products ----------------
 class ProductCreate(BaseModel):
     name: str
-    category: ProductCategory
+    category_id: str
     sku: Optional[str] = None
     cost_price: float = 0
     sale_price: float = 0
@@ -37,7 +49,7 @@ class ProductCreate(BaseModel):
 
 class ProductUpdate(BaseModel):
     name: Optional[str] = None
-    category: Optional[ProductCategory] = None
+    category_id: Optional[str] = None
     sku: Optional[str] = None
     cost_price: Optional[float] = None
     sale_price: Optional[float] = None
@@ -49,7 +61,8 @@ class ProductOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: str
     name: str
-    category: ProductCategory
+    category_id: str
+    category_name: str
     sku: Optional[str]
     cost_price: float
     sale_price: float
@@ -119,8 +132,10 @@ class B2BOrderItemOut(BaseModel):
     product_id: str
     quantity: int
     unit_price: float
+    cost_price: float
     discount_percentage: float
     line_total: float
+    line_profit: float
 
 
 class B2BOrderOut(BaseModel):
@@ -128,6 +143,7 @@ class B2BOrderOut(BaseModel):
     id: str
     customer_id: str
     total_amount: float
+    total_profit: float
     note: Optional[str]
     created_at: datetime
     items: List[B2BOrderItemOut]
@@ -184,12 +200,16 @@ class FinanceEntryOut(BaseModel):
 
 # ---------------- Reports ----------------
 class DashboardSummary(BaseModel):
+    period: str                       # echoes back the requested period
     total_products: int
     low_stock_count: int
     out_of_stock_count: int
-    month_income: float
-    month_expense: float
-    month_b2b_sales: float
+    period_income: float
+    period_expense: float
+    period_b2b_sales: float
+    period_profit: float              # gross profit from B2B sales in the period (revenue - cost of goods)
+    free_distribution_events: int     # number of distribution records in the period
+    free_distribution_pieces: int     # total units given away as samples in the period
 
 
 class MonthlySalesPoint(BaseModel):

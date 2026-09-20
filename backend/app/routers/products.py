@@ -10,13 +10,13 @@ router = APIRouter(prefix="/products", tags=["Products"], dependencies=[Depends(
 
 @router.get("/", response_model=List[schemas.ProductOut])
 def list_products(
-    category: Optional[models.ProductCategory] = None,
+    category_id: Optional[str] = None,
     low_stock_only: bool = False,
     db: Session = Depends(get_db),
 ):
     q = db.query(models.Product).filter(models.Product.is_active == True)  # noqa: E712
-    if category:
-        q = q.filter(models.Product.category == category)
+    if category_id:
+        q = q.filter(models.Product.category_id == category_id)
     products = q.order_by(models.Product.name).all()
     if low_stock_only:
         products = [p for p in products if p.stock_status in ("low", "out")]
@@ -25,6 +25,9 @@ def list_products(
 
 @router.post("/", response_model=schemas.ProductOut, status_code=201)
 def create_product(payload: schemas.ProductCreate, db: Session = Depends(get_db)):
+    category = db.get(models.Category, payload.category_id)
+    if not category:
+        raise HTTPException(404, "الفئة غير موجودة")
     if payload.sku:
         existing = db.query(models.Product).filter(models.Product.sku == payload.sku).first()
         if existing:
@@ -49,7 +52,11 @@ def update_product(product_id: str, payload: schemas.ProductUpdate, db: Session 
     product = db.get(models.Product, product_id)
     if not product:
         raise HTTPException(404, "المنتج غير موجود")
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    data = payload.model_dump(exclude_unset=True)
+    if "category_id" in data and data["category_id"]:
+        if not db.get(models.Category, data["category_id"]):
+            raise HTTPException(404, "الفئة غير موجودة")
+    for field, value in data.items():
         setattr(product, field, value)
     db.commit()
     db.refresh(product)

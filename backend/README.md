@@ -25,6 +25,12 @@ Create the first (and only, for now) user:
 python create_admin.py admin "your-password"
 ```
 
+Optionally seed sample data (2 categories + 10 products) for demos/testing:
+
+```bash
+python seed_data.py
+```
+
 Run the server:
 
 ```bash
@@ -47,6 +53,7 @@ app/
                         in sync with InventoryMovement rows)
   routers/
     auth_router.py     POST /auth/login
+    categories.py         /categories — dynamic product categories (list/create)
     products.py         /products — CRUD
     inventory.py         /inventory — manual restock/adjustment, movement log
     b2b.py                 /b2b/customers, /b2b/orders — automatic discount

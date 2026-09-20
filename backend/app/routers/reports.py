@@ -1,9 +1,9 @@
-from datetime import datetime, timezone
-from typing import List
+from datetime import datetime, timezone, timedelta
+from typing import List, Literal
 from calendar import month_abbr
 
 from dateutil.relativedelta import relativedelta
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, extract
 from sqlalchemy.orm import Session
 
@@ -12,41 +12,75 @@ from ..database import get_db
 
 router = APIRouter(prefix="/reports", tags=["Reports"], dependencies=[Depends(auth.get_current_user)])
 
+Period = Literal["today", "month", "quarter", "year"]
+
+
+def period_start(period: Period, now: datetime) -> datetime:
+    if period == "today":
+        return now.replace(hour=0, minute=0, second=0, microsecond=0)
+    if period == "month":
+        return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    if period == "quarter":
+        quarter_first_month = ((now.month - 1) // 3) * 3 + 1
+        return now.replace(month=quarter_first_month, day=1, hour=0, minute=0, second=0, microsecond=0)
+    if period == "year":
+        return now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    raise HTTPException(400, "period غير صالحة — استخدم today, month, quarter, أو year")
+
 
 @router.get("/dashboard", response_model=schemas.DashboardSummary)
-def dashboard_summary(db: Session = Depends(get_db)):
+def dashboard_summary(period: Period = "today", db: Session = Depends(get_db)):
     now = datetime.now(timezone.utc)
-    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    start = period_start(period, now)
 
     products = db.query(models.Product).filter(models.Product.is_active == True).all()  # noqa: E712
     low_stock = sum(1 for p in products if p.stock_status == "low")
     out_of_stock = sum(1 for p in products if p.stock_status == "out")
 
-    month_income = (
+    period_income = (
         db.query(func.coalesce(func.sum(models.FinanceEntry.amount), 0))
         .filter(models.FinanceEntry.type == models.FinanceEntryType.income)
-        .filter(models.FinanceEntry.entry_date >= month_start)
+        .filter(models.FinanceEntry.entry_date >= start)
         .scalar()
     )
-    month_expense = (
+    period_expense = (
         db.query(func.coalesce(func.sum(models.FinanceEntry.amount), 0))
         .filter(models.FinanceEntry.type == models.FinanceEntryType.expense)
-        .filter(models.FinanceEntry.entry_date >= month_start)
+        .filter(models.FinanceEntry.entry_date >= start)
         .scalar()
     )
-    month_b2b_sales = (
-        db.query(func.coalesce(func.sum(models.B2BOrder.total_amount), 0))
-        .filter(models.B2BOrder.created_at >= month_start)
-        .scalar()
+    b2b_row = (
+        db.query(
+            func.coalesce(func.sum(models.B2BOrder.total_amount), 0),
+            func.coalesce(func.sum(models.B2BOrder.total_profit), 0),
+        )
+        .filter(models.B2BOrder.created_at >= start)
+        .first()
     )
+    period_b2b_sales, period_profit = float(b2b_row[0] or 0), float(b2b_row[1] or 0)
+
+    dist_row = (
+        db.query(
+            func.count(func.distinct(models.FreeDistribution.id)),
+            func.coalesce(func.sum(models.FreeDistributionItem.quantity), 0),
+        )
+        .join(models.FreeDistributionItem, models.FreeDistributionItem.distribution_id == models.FreeDistribution.id)
+        .filter(models.FreeDistribution.created_at >= start)
+        .first()
+    )
+    dist_events, dist_pieces = int(dist_row[0] or 0), int(dist_row[1] or 0)
 
     return schemas.DashboardSummary(
+        period=period,
         total_products=len(products),
         low_stock_count=low_stock,
         out_of_stock_count=out_of_stock,
-        month_income=float(month_income or 0),
-        month_expense=float(month_expense or 0),
-        month_b2b_sales=float(month_b2b_sales or 0),
+        period_income=float(period_income or 0),
+        period_expense=float(period_expense or 0),
+        period_b2b_sales=period_b2b_sales,
+        period_profit=period_profit,
+        free_distribution_events=dist_events,
+        free_distribution_pieces=dist_pieces,
     )
 
 

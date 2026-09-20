@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from . import models
 from .database import engine
-from .routers import auth_router, products, inventory, b2b, free_distribution, finance, reports
+from .routers import auth_router, categories, products, inventory, b2b, free_distribution, finance, reports
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -14,6 +14,7 @@ app = FastAPI(
     version="0.1.0",
 )
 
+# Dev CORS — tighten to the actual frontend origin(s) before production.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -23,6 +24,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router.router)
+app.include_router(categories.router)
 app.include_router(products.router)
 app.include_router(inventory.router)
 app.include_router(b2b.router)

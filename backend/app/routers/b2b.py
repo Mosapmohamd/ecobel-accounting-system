@@ -52,11 +52,12 @@ def create_order(payload: schemas.B2BOrderCreate, db: Session = Depends(get_db))
     if not payload.items:
         raise HTTPException(400, "الأوردر لازم يحتوي على منتج واحد على الأقل")
 
-    order = models.B2BOrder(customer_id=customer.id, note=payload.note, total_amount=0)
+    order = models.B2BOrder(customer_id=customer.id, note=payload.note, total_amount=0, total_profit=0)
     db.add(order)
     db.flush()  # get order.id without committing
 
     total = 0.0
+    total_profit = 0.0
     for item_in in payload.items:
         product = db.get(models.Product, item_in.product_id)
         if not product:
@@ -68,13 +69,16 @@ def create_order(payload: schemas.B2BOrderCreate, db: Session = Depends(get_db))
         # automatically, never entered manually per order.
         discount = customer.discount_percentage
         line_total = product.sale_price * item_in.quantity * (1 - discount / 100)
+        line_profit = line_total - (product.cost_price * item_in.quantity)
         total += line_total
+        total_profit += line_profit
 
         order_item = models.B2BOrderItem(
             order_id=order.id,
             product_id=product.id,
             quantity=item_in.quantity,
             unit_price=product.sale_price,
+            cost_price=product.cost_price,
             discount_percentage=discount,
             line_total=line_total,
         )
@@ -87,6 +91,7 @@ def create_order(payload: schemas.B2BOrderCreate, db: Session = Depends(get_db))
         )
 
     order.total_amount = total
+    order.total_profit = total_profit
 
     # Record the revenue as a finance entry automatically
     finance_entry = models.FinanceEntry(
