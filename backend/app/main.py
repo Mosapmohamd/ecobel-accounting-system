@@ -1,7 +1,13 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from .routers import auth_router, categories, products, inventory, b2b, free_distribution, finance, reports
+from .routers.auth_router import limiter
 
 # Schema is now managed by Alembic migrations (see alembic/ and the README) —
 # run `alembic upgrade head` before starting the server instead of relying
@@ -15,10 +21,20 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# Dev CORS — tighten to the actual frontend origin(s) before production.
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
+# Comma-separated list of allowed frontend origins. Defaults cover the
+# Vite dev server only — set FRONTEND_ORIGINS in production to the real
+# deployed frontend URL(s) instead of leaving this wide open.
+FRONTEND_ORIGINS = os.getenv(
+    "FRONTEND_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=FRONTEND_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

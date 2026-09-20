@@ -3,7 +3,7 @@ from typing import List, Literal
 from calendar import month_abbr
 
 from dateutil.relativedelta import relativedelta
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, extract
 from sqlalchemy.orm import Session
 
@@ -80,7 +80,7 @@ def dashboard_summary(period: Period = "today", db: Session = Depends(get_db)):
 
 
 @router.get("/monthly-sales", response_model=List[schemas.MonthlySalesPoint])
-def monthly_sales(months: int = 6, db: Session = Depends(get_db)):
+def monthly_sales(months: int = Query(6, ge=1, le=36), db: Session = Depends(get_db)):
     """Income-type finance entries grouped by month, last N months
     (this covers both website sales — recorded manually/via future website
     integration — and B2B sales, since B2B orders auto-create an income entry)."""

@@ -41,17 +41,17 @@ class ProductCreate(BaseModel):
     name: str
     category_id: str
     sku: Optional[str] = None
-    sale_price: float = 0
-    quantity: int = 0
-    low_stock_threshold: int = 10
+    sale_price: float = Field(0, ge=0)
+    quantity: int = Field(0, ge=0)
+    low_stock_threshold: int = Field(10, ge=0)
 
 
 class ProductUpdate(BaseModel):
     name: Optional[str] = None
     category_id: Optional[str] = None
     sku: Optional[str] = None
-    sale_price: Optional[float] = None
-    low_stock_threshold: Optional[int] = None
+    sale_price: Optional[float] = Field(None, ge=0)
+    low_stock_threshold: Optional[int] = Field(None, ge=0)
     is_active: Optional[bool] = None
 
 
@@ -92,14 +92,14 @@ class InventoryMovementOut(BaseModel):
 class B2BCustomerCreate(BaseModel):
     name: str
     phone: Optional[str] = None
-    discount_percentage: float = 0
+    discount_percentage: float = Field(0, ge=0, le=100)
     notes: Optional[str] = None
 
 
 class B2BCustomerUpdate(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None
-    discount_percentage: Optional[float] = None
+    discount_percentage: Optional[float] = Field(None, ge=0, le=100)
     notes: Optional[str] = None
 
 
@@ -115,7 +115,7 @@ class B2BCustomerOut(BaseModel):
 
 class B2BOrderItemIn(BaseModel):
     product_id: str
-    quantity: int
+    quantity: int = Field(..., gt=0)
 
 
 class B2BOrderCreate(BaseModel):
@@ -146,7 +146,7 @@ class B2BOrderOut(BaseModel):
 # ---------------- Free distribution ----------------
 class FreeDistributionItemIn(BaseModel):
     product_id: str
-    quantity: int
+    quantity: int = Field(..., gt=0)
 
 
 class FreeDistributionCreate(BaseModel):
@@ -176,7 +176,7 @@ class FreeDistributionOut(BaseModel):
 class FinanceEntryCreate(BaseModel):
     type: FinanceEntryType
     category: str
-    amount: float
+    amount: float = Field(..., gt=0)
     description: Optional[str] = None
     entry_date: Optional[datetime] = None
 

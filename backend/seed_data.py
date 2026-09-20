@@ -21,10 +21,11 @@ from datetime import datetime, timezone
 
 from dateutil.relativedelta import relativedelta
 
-from app.database import SessionLocal, engine
+from app.database import SessionLocal
 from app import models
 
-models.Base.metadata.create_all(bind=engine)
+# Assumes `alembic upgrade head` has already been run — this script only
+# seeds data, it doesn't create the schema.
 
 random.seed(42)  # deterministic output — same data every run on an empty DB
 

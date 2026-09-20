@@ -20,11 +20,11 @@ For local development without PostgreSQL installed, just leave
 For production, point `DATABASE_URL` at your PostgreSQL instance.
 
 Create the database schema (via Alembic — see below), then create the
-first (and only, for now) user:
+first (and only, for now) user (you'll be prompted for the password):
 
 ```bash
 alembic upgrade head
-python create_admin.py admin "your-password"
+python create_admin.py admin
 ```
 
 Optionally seed sample data (3 categories, 20 products, and ~18 months of
@@ -104,6 +104,23 @@ alembic/
   since past order items and movements reference them.
 - **No two active products can share the same name within the same
   category** — enforced on both create and edit.
+
+## Security notes
+
+- **`SECRET_KEY` is required outside local SQLite dev** — if `DATABASE_URL`
+  points at a real database and `SECRET_KEY` isn't set, the app refuses to
+  start rather than silently signing tokens with a guessable default.
+- **`/auth/login` is rate-limited** to 5 attempts/minute per IP (via
+  `slowapi`) to slow down credential brute-forcing.
+- **CORS is restricted** to `FRONTEND_ORIGINS` (comma-separated env var,
+  defaults to the local Vite dev server only) instead of `*`.
+- **Numeric inputs are bounds-checked** at the schema level: discounts are
+  0–100%, prices/quantities/amounts can't be negative or zero where that
+  wouldn't make sense (e.g. a finance entry amount, an order line quantity).
+- **`create_admin.py` prompts for the password** instead of taking it as a
+  plain CLI argument, so it doesn't end up in shell history or `ps` output.
+- **List endpoints cap their page size** (`/inventory/movements` limit ≤
+  500, `/reports/monthly-sales` months ≤ 36) to avoid unbounded queries.
 
 ## Not yet wired up (future work)
 

@@ -9,9 +9,24 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from . import models
-from .database import get_db
+from .database import get_db, DATABASE_URL
 
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-change-in-production")
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    if DATABASE_URL.startswith("sqlite"):
+        # Local SQLite is only ever used for development, so a fixed
+        # fallback here is fine — it never reaches a real deployment.
+        SECRET_KEY = "dev-secret-change-in-production"
+    else:
+        # Any non-SQLite DATABASE_URL means a real (likely production)
+        # database is configured — refuse to start rather than silently
+        # sign tokens with a secret an attacker could read from the
+        # public source code.
+        raise RuntimeError(
+            "SECRET_KEY environment variable must be set when DATABASE_URL "
+            "points at a real database. Refusing to start with no secret "
+            "configured — set SECRET_KEY in your environment/.env."
+        )
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24h — single internal team, no need for short sessions
 

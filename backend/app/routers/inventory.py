@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from .. import models, schemas, auth, services
@@ -30,7 +30,7 @@ def adjust_stock(payload: schemas.StockAdjustment, db: Session = Depends(get_db)
 @router.get("/movements", response_model=List[schemas.InventoryMovementOut])
 def list_movements(
     product_id: Optional[str] = None,
-    limit: int = 100,
+    limit: int = Query(100, ge=1, le=500),
     db: Session = Depends(get_db),
 ):
     q = db.query(models.InventoryMovement)
