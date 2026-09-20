@@ -1,16 +1,12 @@
 import { useEffect, useState } from 'react';
-import { productsApi, inventoryApi, type Product, type ProductCategory } from '../lib/api';
+import { productsApi, categoriesApi, inventoryApi, type Product, type Category } from '../lib/api';
 import Modal from '../components/Modal';
-
-const categoryLabel: Record<ProductCategory, string> = {
-  skincare: 'عناية بالبشرة',
-  haircare: 'عناية بالشعر',
-};
 
 const statusLabel: Record<string, string> = { ok: 'متوفر', low: 'منخفض', out: 'نفذ' };
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -18,9 +14,11 @@ export default function ProductsPage() {
 
   function load() {
     setLoading(true);
-    productsApi
-      .list()
-      .then(setProducts)
+    Promise.all([productsApi.list(), categoriesApi.list()])
+      .then(([p, c]) => {
+        setProducts(p);
+        setCategories(c);
+      })
       .catch(() => setError('تعذر تحميل المنتجات'))
       .finally(() => setLoading(false));
   }
@@ -60,7 +58,7 @@ export default function ProductsPage() {
               {products.map((p) => (
                 <tr key={p.id}>
                   <td style={{ fontWeight: 600 }}>{p.name}</td>
-                  <td>{categoryLabel[p.category]}</td>
+                  <td>{p.category_name}</td>
                   <td>{p.sale_price.toLocaleString('ar-EG')} ج.م</td>
                   <td>{p.quantity}</td>
                   <td>
@@ -79,7 +77,12 @@ export default function ProductsPage() {
       </div>
 
       {showCreate && (
-        <CreateProductModal onClose={() => setShowCreate(false)} onCreated={() => { setShowCreate(false); load(); }} />
+        <CreateProductModal
+          categories={categories}
+          onClose={() => setShowCreate(false)}
+          onCreated={() => { setShowCreate(false); load(); }}
+          onCategoryAdded={(c) => setCategories((prev) => [...prev, c])}
+        />
       )}
       {adjustTarget && (
         <AdjustStockModal
@@ -92,9 +95,22 @@ export default function ProductsPage() {
   );
 }
 
-function CreateProductModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+function CreateProductModal({
+  categories,
+  onClose,
+  onCreated,
+  onCategoryAdded,
+}: {
+  categories: Category[];
+  onClose: () => void;
+  onCreated: () => void;
+  onCategoryAdded: (c: Category) => void;
+}) {
   const [name, setName] = useState('');
-  const [category, setCategory] = useState<ProductCategory>('skincare');
+  const [categoryId, setCategoryId] = useState(categories[0]?.id || '');
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [savingCategory, setSavingCategory] = useState(false);
   const [salePrice, setSalePrice] = useState('');
   const [costPrice, setCostPrice] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -102,14 +118,35 @@ function CreateProductModal({ onClose, onCreated }: { onClose: () => void; onCre
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  async function handleAddCategory() {
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) return;
+    setSavingCategory(true);
+    try {
+      const category = await categoriesApi.create(trimmed);
+      onCategoryAdded(category);
+      setCategoryId(category.id);
+      setNewCategoryName('');
+      setAddingCategory(false);
+    } catch {
+      setError('تعذر إضافة الفئة');
+    } finally {
+      setSavingCategory(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!categoryId) {
+      setError('لازم تختار فئة أو تضيف فئة جديدة');
+      return;
+    }
     setError(null);
     setSaving(true);
     try {
       await productsApi.create({
         name,
-        category,
+        category_id: categoryId,
         sale_price: Number(salePrice) || 0,
         cost_price: Number(costPrice) || 0,
         quantity: Number(quantity) || 0,
@@ -132,13 +169,40 @@ function CreateProductModal({ onClose, onCreated }: { onClose: () => void; onCre
             <label>اسم المنتج</label>
             <input value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
           </div>
-          <div className="field">
+
+          <div className="field" style={{ gridColumn: '1 / -1' }}>
             <label>الفئة</label>
-            <select value={category} onChange={(e) => setCategory(e.target.value as ProductCategory)}>
-              <option value="skincare">عناية بالبشرة</option>
-              <option value="haircare">عناية بالشعر</option>
-            </select>
+            {!addingCategory ? (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} style={{ flex: 1 }}>
+                  {categories.length === 0 && <option value="">لا توجد فئات بعد</option>}
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+                <button type="button" className="btn btn-secondary" onClick={() => setAddingCategory(true)}>
+                  + فئة جديدة
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="اسم الفئة الجديدة"
+                  style={{ flex: 1 }}
+                  autoFocus
+                />
+                <button type="button" className="btn btn-primary" onClick={handleAddCategory} disabled={savingCategory}>
+                  {savingCategory ? '...' : 'إضافة'}
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={() => setAddingCategory(false)}>
+                  إلغاء
+                </button>
+              </div>
+            )}
           </div>
+
           <div className="field">
             <label>الكمية الحالية</label>
             <input type="number" min={0} value={quantity} onChange={(e) => setQuantity(e.target.value)} required />
@@ -151,7 +215,7 @@ function CreateProductModal({ onClose, onCreated }: { onClose: () => void; onCre
             <label>سعر التكلفة (ج.م)</label>
             <input type="number" min={0} value={costPrice} onChange={(e) => setCostPrice(e.target.value)} />
           </div>
-          <div className="field" style={{ gridColumn: '1 / -1' }}>
+          <div className="field">
             <label>حد التنبيه بانخفاض المخزون</label>
             <input type="number" min={0} value={threshold} onChange={(e) => setThreshold(e.target.value)} />
           </div>

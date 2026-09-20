@@ -26,13 +26,19 @@ api.interceptors.response.use(
 );
 
 // ---------------- Types ----------------
-export type ProductCategory = 'skincare' | 'haircare';
 export type StockStatus = 'ok' | 'low' | 'out';
+
+export interface Category {
+  id: string;
+  name: string;
+  created_at: string;
+}
 
 export interface Product {
   id: string;
   name: string;
-  category: ProductCategory;
+  category_id: string;
+  category_name: string;
   sku: string | null;
   cost_price: number;
   sale_price: number;
@@ -56,14 +62,17 @@ export interface B2BOrderItem {
   product_id: string;
   quantity: number;
   unit_price: number;
+  cost_price: number;
   discount_percentage: number;
   line_total: number;
+  line_profit: number;
 }
 
 export interface B2BOrder {
   id: string;
   customer_id: string;
   total_amount: number;
+  total_profit: number;
   note: string | null;
   created_at: string;
   items: B2BOrderItem[];
@@ -92,13 +101,19 @@ export interface FinanceEntry {
   entry_date: string;
 }
 
+export type DashboardPeriod = 'today' | 'month' | 'quarter' | 'year';
+
 export interface DashboardSummary {
+  period: DashboardPeriod;
   total_products: number;
   low_stock_count: number;
   out_of_stock_count: number;
-  month_income: number;
-  month_expense: number;
-  month_b2b_sales: number;
+  period_income: number;
+  period_expense: number;
+  period_b2b_sales: number;
+  period_profit: number;
+  free_distribution_events: number;
+  free_distribution_pieces: number;
 }
 
 export interface MonthlySalesPoint {
@@ -127,11 +142,17 @@ export async function login(username: string, password: string) {
   return data as { access_token: string; token_type: string };
 }
 
+// ---------------- Categories ----------------
+export const categoriesApi = {
+  list: () => api.get<Category[]>('/categories/').then((r) => r.data),
+  create: (name: string) => api.post<Category>('/categories/', { name }).then((r) => r.data),
+};
+
 // ---------------- Products ----------------
 export const productsApi = {
-  list: (params?: { category?: ProductCategory; low_stock_only?: boolean }) =>
+  list: (params?: { category_id?: string; low_stock_only?: boolean }) =>
     api.get<Product[]>('/products/', { params }).then((r) => r.data),
-  create: (payload: Partial<Product>) =>
+  create: (payload: Partial<Product> & { category_id: string }) =>
     api.post<Product>('/products/', payload).then((r) => r.data),
   update: (id: string, payload: Partial<Product>) =>
     api.patch<Product>(`/products/${id}`, payload).then((r) => r.data),
@@ -180,7 +201,8 @@ export const financeApi = {
 
 // ---------------- Reports ----------------
 export const reportsApi = {
-  dashboard: () => api.get<DashboardSummary>('/reports/dashboard').then((r) => r.data),
+  dashboard: (period: DashboardPeriod = 'today') =>
+    api.get<DashboardSummary>('/reports/dashboard', { params: { period } }).then((r) => r.data),
   monthlySales: (months = 6) =>
     api.get<MonthlySalesPoint[]>('/reports/monthly-sales', { params: { months } }).then((r) => r.data),
 };

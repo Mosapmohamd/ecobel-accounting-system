@@ -73,7 +73,7 @@ export default function B2BPage() {
         ) : (
           <table>
             <thead>
-              <tr><th>العميل</th><th>عدد الأصناف</th><th>الإجمالي بعد الخصم</th><th>التاريخ</th></tr>
+              <tr><th>العميل</th><th>عدد الأصناف</th><th>الإجمالي بعد الخصم</th><th>صافي الربح</th><th>التاريخ</th></tr>
             </thead>
             <tbody>
               {orders.map((o) => (
@@ -81,6 +81,7 @@ export default function B2BPage() {
                   <td style={{ fontWeight: 600 }}>{customerName(o.customer_id)}</td>
                   <td>{o.items.length}</td>
                   <td>{o.total_amount.toLocaleString('ar-EG')} ج.م</td>
+                  <td style={{ color: 'var(--ok)', fontWeight: 700 }}>{o.total_profit.toLocaleString('ar-EG')} ج.م</td>
                   <td>{new Date(o.created_at).toLocaleDateString('ar-EG')}</td>
                 </tr>
               ))}
