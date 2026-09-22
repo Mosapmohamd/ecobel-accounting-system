@@ -1,8 +1,9 @@
 from datetime import datetime
+from enum import Enum as PyEnum
 from typing import Optional, List
 from pydantic import BaseModel, ConfigDict, Field
 
-from .models import MovementType, RecipientType, FinanceEntryType
+from .models import MovementType, RecipientType, FinanceEntryType, CouponDiscountType, OrderStatus
 
 
 # ---------------- Categories ----------------
@@ -67,6 +68,7 @@ class ProductOut(BaseModel):
     low_stock_threshold: int
     is_active: bool
     stock_status: str
+    image_url: Optional[str] = None
     created_at: datetime
 
 
@@ -208,3 +210,104 @@ class DashboardSummary(BaseModel):
 class MonthlySalesPoint(BaseModel):
     month: str
     total: float
+
+
+# ---------------- Online store: product image ----------------
+class ProductImageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    name: str
+    image_url: Optional[str] = None
+
+
+# ---------------- Online store: coupons ----------------
+class CouponLimitType(str, PyEnum):
+    duration = "duration"
+    count = "count"
+    unlimited = "unlimited"
+
+
+class CouponCreate(BaseModel):
+    code: str
+    discount_type: CouponDiscountType
+    discount_value: float = Field(..., gt=0)
+    min_order_amount: float = Field(0, ge=0)
+    limit_type: CouponLimitType = CouponLimitType.unlimited
+    max_uses: Optional[int] = Field(None, gt=0)
+    expires_at: Optional[datetime] = None
+
+
+class CouponUpdate(BaseModel):
+    discount_value: Optional[float] = Field(None, gt=0)
+    min_order_amount: Optional[float] = Field(None, ge=0)
+    limit_type: Optional[CouponLimitType] = None
+    max_uses: Optional[int] = Field(None, gt=0)
+    expires_at: Optional[datetime] = None
+    is_active: Optional[bool] = None
+
+
+class CouponOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    code: str
+    discount_type: CouponDiscountType
+    discount_value: float
+    min_order_amount: float
+    max_uses: Optional[int]
+    used_count: int
+    is_active: bool
+    expires_at: Optional[datetime]
+    created_at: datetime
+
+
+# ---------------- Online store: orders ----------------
+class OnlineOrderItemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    product_id: str
+    product_name: str
+    unit_price: float
+    quantity: int
+    line_total: float
+
+
+class OnlineOrderOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    order_number: str
+    customer_name: str
+    customer_phone: str
+    shipping_address: str
+    status: OrderStatus
+    payment_method: str
+    subtotal: float
+    discount_amount: float
+    shipping_fee: float
+    total_amount: float
+    note: Optional[str]
+    created_at: datetime
+    items: List[OnlineOrderItemOut]
+
+
+class OnlineOrderStatusUpdate(BaseModel):
+    status: OrderStatus
+
+
+# ---------------- Online store: sales analytics ----------------
+class RevenuePoint(BaseModel):
+    date: str
+    total: float
+
+
+class TopProduct(BaseModel):
+    product_name: str
+    quantity_sold: int
+    revenue: float
+
+
+class SalesAnalytics(BaseModel):
+    source: str                       # echoes back "all" / "online" / "b2b"
+    total_revenue: float
+    total_orders: int
+    orders_by_status: dict[str, int]
+    revenue_last_30_days: List[RevenuePoint]
+    top_products: List[TopProduct]

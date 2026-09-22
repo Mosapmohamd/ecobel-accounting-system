@@ -1,10 +1,16 @@
+import os
+import uuid
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from .. import models, schemas, auth
 from ..database import get_db
+
+STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "static")
+ALLOWED_IMAGE_TYPES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
 router = APIRouter(prefix="/products", tags=["Products"], dependencies=[Depends(auth.get_current_user)])
 
@@ -100,3 +106,31 @@ def deactivate_product(product_id: str, db: Session = Depends(get_db)):
         raise HTTPException(404, "المنتج غير موجود")
     product.is_active = False
     db.commit()
+
+
+@router.post("/{product_id}/image", response_model=schemas.ProductOut)
+async def upload_product_image(product_id: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    """Upload/replace a product photo (shown on the website). Stored locally
+    under static/products for now — a Supabase Storage move is planned."""
+    product = db.get(models.Product, product_id)
+    if not product:
+        raise HTTPException(404, "المنتج غير موجود")
+
+    ext = ALLOWED_IMAGE_TYPES.get(file.content_type)
+    if not ext:
+        raise HTTPException(400, "الصورة لازم تكون JPG أو PNG أو WEBP")
+
+    contents = await file.read()
+    if len(contents) > MAX_IMAGE_BYTES:
+        raise HTTPException(400, "حجم الصورة أكبر من 5 ميجا")
+
+    products_dir = os.path.join(STATIC_DIR, "products")
+    os.makedirs(products_dir, exist_ok=True)
+    filename = f"{product.id}-{uuid.uuid4().hex[:8]}{ext}"
+    with open(os.path.join(products_dir, filename), "wb") as f:
+        f.write(contents)
+
+    product.image_url = f"/static/products/{filename}"
+    db.commit()
+    db.refresh(product)
+    return product
