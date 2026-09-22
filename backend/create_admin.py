@@ -13,8 +13,11 @@ on that machine.
 import sys
 import getpass
 
-from app.database import SessionLocal
+from app.database import SessionLocal, engine
 from app import models, auth
+
+# Ensure tables exist even if the server hasn't been started yet.
+models.Base.metadata.create_all(bind=engine)
 
 
 def main():
