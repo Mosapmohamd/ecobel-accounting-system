@@ -2,22 +2,36 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from .routers import auth_router, categories, products, inventory, b2b, free_distribution, finance, reports
+from . import models
+from .database import engine
+from .schema_sync import ensure_columns
+from .routers import (
+    auth_router, categories, products, inventory, b2b, free_distribution,
+    finance, reports, coupons, online_orders, web_analytics,
+)
 from .routers.auth_router import limiter
 
-# Schema is now managed by Alembic migrations (see alembic/ and the README) —
-# run `alembic upgrade head` before starting the server instead of relying
-# on create_all, so existing tables get altered in place rather than
-# silently skipped.
+# Schema is created on startup (no Alembic — same approach as ecobel-website).
+# create_all makes any missing tables without touching existing ones;
+# ensure_columns adds any new columns (e.g. products.image_url) to tables
+# that predate them.
+models.Base.metadata.create_all(bind=engine)
+ensure_columns(engine)
+
+# Product images uploaded from the admin are stored/served here.
+STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
+os.makedirs(os.path.join(STATIC_DIR, "products"), exist_ok=True)
 
 app = FastAPI(
     title="Eco Bel — Accounting & Inventory System",
     description="Backend API for inventory tracking, B2B wholesale sales, "
-                "free sample distribution, finance entries, and reports.",
+                "free sample distribution, finance entries, reports, and "
+                "online-store admin (products, coupons, online orders).",
     version="0.1.0",
 )
 
@@ -40,6 +54,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
 app.include_router(auth_router.router)
 app.include_router(categories.router)
 app.include_router(products.router)
@@ -48,6 +64,9 @@ app.include_router(b2b.router)
 app.include_router(free_distribution.router)
 app.include_router(finance.router)
 app.include_router(reports.router)
+app.include_router(coupons.router)
+app.include_router(online_orders.router)
+app.include_router(web_analytics.router)
 
 
 @app.get("/")
