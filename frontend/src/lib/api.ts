@@ -45,6 +45,7 @@ export interface Product {
   low_stock_threshold: number;
   is_active: boolean;
   stock_status: StockStatus;
+  image_url: string | null;
   created_at: string;
 }
 
@@ -152,6 +153,13 @@ export const productsApi = {
   update: (id: string, payload: Partial<Product>) =>
     api.patch<Product>(`/products/${id}`, payload).then((r) => r.data),
   deactivate: (id: string) => api.delete(`/products/${id}`),
+  uploadImage: (id: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return api.post<Product>(`/products/${id}/image`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((r) => r.data);
+  },
 };
 
 // ---------------- Inventory ----------------
@@ -200,4 +208,105 @@ export const reportsApi = {
     api.get<DashboardSummary>('/reports/dashboard', { params: { period } }).then((r) => r.data),
   monthlySales: (months = 6) =>
     api.get<MonthlySalesPoint[]>('/reports/monthly-sales', { params: { months } }).then((r) => r.data),
+};
+
+// ==========================================================================
+// Online store admin — coupons, website orders, unified sales analytics.
+// The website (ecobel-website) validates coupons and creates these orders;
+// all administration of them happens here.
+// ==========================================================================
+
+// ---------------- Coupons ----------------
+export type CouponDiscountType = 'percentage' | 'fixed';
+export type CouponLimitType = 'duration' | 'count' | 'unlimited';
+
+export interface Coupon {
+  id: string;
+  code: string;
+  discount_type: CouponDiscountType;
+  discount_value: number;
+  min_order_amount: number;
+  max_uses: number | null;
+  used_count: number;
+  is_active: boolean;
+  expires_at: string | null;
+  created_at: string;
+}
+
+export const couponsApi = {
+  list: () => api.get<Coupon[]>('/coupons/').then((r) => r.data),
+  create: (payload: {
+    code: string;
+    discount_type: CouponDiscountType;
+    discount_value: number;
+    min_order_amount?: number;
+    limit_type: CouponLimitType;
+    max_uses?: number;
+    expires_at?: string;
+  }) => api.post<Coupon>('/coupons/', payload).then((r) => r.data),
+  renew: (id: string) => api.post<Coupon>(`/coupons/${id}/renew`).then((r) => r.data),
+  remove: (id: string) => api.delete(`/coupons/${id}`),
+};
+
+// ---------------- Online (website) orders ----------------
+export type OnlineOrderStatus = 'pending' | 'shipped' | 'delivered' | 'cancelled';
+
+export interface OnlineOrderItem {
+  product_id: string;
+  product_name: string;
+  unit_price: number;
+  quantity: number;
+  line_total: number;
+}
+
+export interface OnlineOrder {
+  id: string;
+  order_number: string;
+  customer_name: string;
+  customer_phone: string;
+  shipping_address: string;
+  status: OnlineOrderStatus;
+  payment_method: string;
+  subtotal: number;
+  discount_amount: number;
+  shipping_fee: number;
+  total_amount: number;
+  note: string | null;
+  created_at: string;
+  items: OnlineOrderItem[];
+}
+
+export const onlineOrdersApi = {
+  list: (status?: OnlineOrderStatus) =>
+    api.get<OnlineOrder[]>('/online-orders/', { params: status ? { status } : undefined }).then((r) => r.data),
+  updateStatus: (id: string, status: OnlineOrderStatus) =>
+    api.patch<OnlineOrder>(`/online-orders/${id}/status`, { status }).then((r) => r.data),
+};
+
+// ---------------- Unified sales analytics ----------------
+export type SalesSource = 'all' | 'online' | 'b2b';
+
+export interface RevenuePoint {
+  date: string;
+  total: number;
+}
+
+export interface TopProduct {
+  product_name: string;
+  quantity_sold: number;
+  revenue: number;
+}
+
+export interface SalesAnalytics {
+  source: SalesSource;
+  total_revenue: number;
+  total_orders: number;
+  orders_by_status: Record<string, number>;
+  revenue_last_30_days: RevenuePoint[];
+  top_products: TopProduct[];
+}
+
+export const salesAnalyticsApi = {
+  get: (source: SalesSource = 'all') =>
+    api.get<SalesAnalytics>('/sales-analytics/', { params: { source } }).then((r) => r.data),
 };
