@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { productsApi, categoriesApi, inventoryApi, type Product, type Category } from '../lib/api';
+import { useEffect, useRef, useState } from 'react';
+import { productsApi, categoriesApi, inventoryApi, API_BASE, type Product, type Category } from '../lib/api';
 import Modal from '../components/Modal';
 
 const statusLabel: Record<string, string> = { ok: 'متوفر', low: 'منخفض', out: 'نفذ' };
@@ -47,6 +47,7 @@ export default function ProductsPage() {
           <table>
             <thead>
               <tr>
+                <th>الصورة</th>
                 <th>المنتج</th>
                 <th>الفئة</th>
                 <th>سعر البيع</th>
@@ -58,6 +59,7 @@ export default function ProductsPage() {
             <tbody>
               {products.map((p) => (
                 <tr key={p.id}>
+                  <td><ProductImageCell product={p} onChanged={load} /></td>
                   <td style={{ fontWeight: 600 }}>{p.name}</td>
                   <td>{p.category_name}</td>
                   <td>{p.sale_price.toLocaleString('ar-EG')} ج.م</td>
@@ -428,5 +430,46 @@ function AdjustStockModal({
         </div>
       </form>
     </Modal>
+  );
+}
+
+function ProductImageCell({ product, onChanged }: { product: Product; onChanged: () => void }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      await productsApi.uploadImage(product.id, file);
+      onChanged();
+    } catch {
+      alert('تعذر رفع الصورة');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <>
+      <button
+        onClick={() => fileRef.current?.click()}
+        title="اضغط لتغيير الصورة"
+        style={{
+          width: 44, height: 44, borderRadius: 8, overflow: 'hidden',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'var(--parchment-2)', border: '1px solid var(--line)', flexShrink: 0,
+        }}
+      >
+        {product.image_url ? (
+          // eslint-disable-next-line jsx-a11y/alt-text
+          <img src={`${API_BASE}${product.image_url}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <span style={{ fontSize: 9, color: '#8a8074' }}>{uploading ? '...' : '+ صورة'}</span>
+        )}
+      </button>
+      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={handleFile} />
+    </>
   );
 }
