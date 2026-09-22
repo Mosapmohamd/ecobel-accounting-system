@@ -20,6 +20,14 @@ const navItems = [
       { to: '/finance', label: 'المصروفات والإيرادات', icon: MoneyIcon },
     ],
   },
+  {
+    group: 'المتجر الإلكتروني',
+    items: [
+      { to: '/online-orders', label: 'طلبات الموقع', icon: TruckIcon },
+      { to: '/coupons', label: 'الكوبونات', icon: TagIcon },
+      { to: '/sales-analytics', label: 'تحليلات المبيعات', icon: ChartIcon },
+    ],
+  },
 ];
 
 export default function Layout() {
@@ -110,6 +118,28 @@ function MoneyIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <rect x="2" y="6" width="20" height="13" rx="2" /><path d="M2 10h20" />
+    </svg>
+  );
+}
+function TruckIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M3 6h11v10H3zM14 10h4l3 3v3h-7zM6 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM17 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
+    </svg>
+  );
+}
+function TagIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="m20.59 13.41-7.17 7.17a2 2 0 0 1-2.83 0L3 13V3h10l7.59 7.59a2 2 0 0 1 0 2.82Z" />
+      <circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+function ChartIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M3 3v18h18M8 17V10M13 17V6M18 17v-4" />
     </svg>
   );
 }
