@@ -1,6 +1,14 @@
 import os
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+
+# Load backend/.env into the real process environment. Without this,
+# os.getenv() below only sees actual OS environment variables — a .env
+# file sitting next to this code does nothing on its own, and every
+# setting quietly falls back to its default (e.g. the local SQLite file)
+# with no error, which is exactly the trap this line prevents.
+load_dotenv()
 
 # The accounting system and the website both point DATABASE_URL at the SAME
 # database (a shared PostgreSQL/Supabase instance in production). This
