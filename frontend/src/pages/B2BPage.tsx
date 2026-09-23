@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { b2bApi, productsApi, type B2BCustomer, type B2BOrder, type Product } from '../lib/api';
 import Modal from '../components/Modal';
 
@@ -8,6 +8,7 @@ export default function B2BPage() {
   const [loading, setLoading] = useState(true);
   const [showNewCustomer, setShowNewCustomer] = useState(false);
   const [showNewOrder, setShowNewOrder] = useState(false);
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   function load() {
     setLoading(true);
@@ -73,16 +74,45 @@ export default function B2BPage() {
         ) : (
           <table>
             <thead>
-              <tr><th>العميل</th><th>عدد الأصناف</th><th>الإجمالي بعد الخصم</th><th>التاريخ</th></tr>
+              <tr><th>العميل</th><th>عدد الأصناف</th><th>خصم إضافي</th><th>الإجمالي بعد الخصم</th><th>التاريخ</th><th></th></tr>
             </thead>
             <tbody>
               {orders.map((o) => (
-                <tr key={o.id}>
-                  <td style={{ fontWeight: 600 }}>{customerName(o.customer_id)}</td>
-                  <td>{o.items.length}</td>
-                  <td>{o.total_amount.toLocaleString('ar-EG')} ج.م</td>
-                  <td>{new Date(o.created_at).toLocaleDateString('ar-EG')}</td>
-                </tr>
+                <Fragment key={o.id}>
+                  <tr>
+                    <td style={{ fontWeight: 600 }}>{customerName(o.customer_id)}</td>
+                    <td>{o.items.length}</td>
+                    <td>{o.extra_discount_percentage ? `${o.extra_discount_percentage}%` : '—'}</td>
+                    <td>{o.total_amount.toLocaleString('ar-EG')} ج.م</td>
+                    <td>{new Date(o.created_at).toLocaleDateString('ar-EG')}</td>
+                    <td>
+                      <button
+                        className="btn"
+                        style={{ padding: '5px 10px', fontSize: 12.5 }}
+                        onClick={() => setExpanded(expanded === o.id ? null : o.id)}
+                      >
+                        {expanded === o.id ? 'إخفاء' : 'التفاصيل'}
+                      </button>
+                    </td>
+                  </tr>
+                  {expanded === o.id && (
+                    <tr>
+                      <td colSpan={6} style={{ background: 'var(--parchment)' }}>
+                        <div style={{ padding: 12, fontSize: 13.5 }}>
+                          {o.note && <div style={{ marginBottom: 8 }}><strong>ملاحظات:</strong> {o.note}</div>}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            {o.items.map((it) => (
+                              <div key={it.product_id} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span>{it.quantity} × {it.unit_price.toLocaleString('ar-EG')} ج.م (خصم {it.discount_percentage}%)</span>
+                                <span style={{ fontWeight: 700 }}>{it.line_total.toLocaleString('ar-EG')} ج.م</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -151,6 +181,11 @@ function NewCustomerModal({ onClose, onCreated }: { onClose: () => void; onCreat
   );
 }
 
+interface OrderLine {
+  product_id: string;
+  quantity: number;
+}
+
 function NewOrderModal({
   customers,
   onClose,
@@ -162,33 +197,65 @@ function NewOrderModal({
 }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [customerId, setCustomerId] = useState(customers[0]?.id || '');
-  const [productId, setProductId] = useState('');
-  const [quantity, setQuantity] = useState('1');
+  const [lines, setLines] = useState<OrderLine[]>([]);
+  const [addProductId, setAddProductId] = useState('');
+  const [addQuantity, setAddQuantity] = useState('1');
+  const [extraDiscount, setExtraDiscount] = useState('0');
+  const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     productsApi.list().then((list) => {
       setProducts(list);
-      if (list[0]) setProductId(list[0].id);
+      if (list[0]) setAddProductId(list[0].id);
     });
   }, []);
 
   const customer = customers.find((c) => c.id === customerId);
-  const product = products.find((p) => p.id === productId);
-  const qty = Number(quantity) || 0;
-  const lineTotal = product && customer ? product.sale_price * qty * (1 - customer.discount_percentage / 100) : 0;
+  const combinedDiscount = Math.min(100, (customer?.discount_percentage || 0) + (Number(extraDiscount) || 0));
+
+  function addLine() {
+    if (!addProductId) return;
+    const qty = Number(addQuantity) || 0;
+    if (qty <= 0) return;
+    setLines((prev) => {
+      const existing = prev.find((l) => l.product_id === addProductId);
+      if (existing) {
+        return prev.map((l) => (l.product_id === addProductId ? { ...l, quantity: l.quantity + qty } : l));
+      }
+      return [...prev, { product_id: addProductId, quantity: qty }];
+    });
+    setAddQuantity('1');
+  }
+
+  function removeLine(productId: string) {
+    setLines((prev) => prev.filter((l) => l.product_id !== productId));
+  }
+
+  const productName = (id: string) => products.find((p) => p.id === id)?.name || id;
+  const productPrice = (id: string) => products.find((p) => p.id === id)?.sale_price || 0;
+  const total = lines.reduce((sum, l) => sum + productPrice(l.product_id) * l.quantity * (1 - combinedDiscount / 100), 0);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!product || !customer || qty <= 0) return;
+    if (!customer || lines.length === 0) {
+      setError('اختاري عميل وأضيفي منتج واحد على الأقل');
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
-      await b2bApi.createOrder({ customer_id: customerId, items: [{ product_id: productId, quantity: qty }] });
+      await b2bApi.createOrder({
+        customer_id: customerId,
+        items: lines,
+        note: note || undefined,
+        extra_discount_percentage: Number(extraDiscount) || 0,
+      });
       onCreated();
-    } catch (err: any) {
-      setError(err?.response?.data?.detail || 'حصل خطأ أثناء إنشاء الأوردر');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setError(msg || 'حصل خطأ أثناء إنشاء الأوردر');
     } finally {
       setSaving(false);
     }
@@ -202,33 +269,56 @@ function NewOrderModal({
           <label>العميل</label>
           <select value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
             {customers.map((c) => (
-              <option key={c.id} value={c.id}>{c.name} — خصم {c.discount_percentage}%</option>
+              <option key={c.id} value={c.id}>{c.name} — خصم ثابت {c.discount_percentage}%</option>
             ))}
           </select>
         </div>
-        <div className="form-grid" style={{ marginBottom: 14 }}>
-          <div className="field">
-            <label>المنتج</label>
-            <select value={productId} onChange={(e) => setProductId(e.target.value)}>
+
+        <div className="field" style={{ marginBottom: 14 }}>
+          <label>خصم إضافي لمرة واحدة (%) — اختياري، بيتحسب فوق خصم العميل الثابت</label>
+          <input type="number" min={0} max={100} value={extraDiscount} onChange={(e) => setExtraDiscount(e.target.value)} />
+        </div>
+
+        <div className="field" style={{ marginBottom: 10 }}>
+          <label>إضافة منتجات</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <select value={addProductId} onChange={(e) => setAddProductId(e.target.value)} style={{ flex: 1 }}>
               {products.map((p) => (
                 <option key={p.id} value={p.id}>{p.name} — متاح {p.quantity}</option>
               ))}
             </select>
-          </div>
-          <div className="field">
-            <label>الكمية</label>
-            <input type="number" min={1} value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+            <input
+              type="number" min={1} value={addQuantity} onChange={(e) => setAddQuantity(e.target.value)}
+              style={{ width: 80, border: '1px solid var(--line)', borderRadius: 6, padding: '8px' }}
+            />
+            <button type="button" className="btn btn-secondary" onClick={addLine}>+ إضافة</button>
           </div>
         </div>
 
-        {product && customer && (
+        {lines.length > 0 && (
+          <div style={{ marginBottom: 14, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {lines.map((l) => (
+              <div key={l.product_id} className="pill" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px' }}>
+                <span>{productName(l.product_id)} × {l.quantity}</span>
+                <button type="button" onClick={() => removeLine(l.product_id)} style={{ color: 'var(--rose)' }}>✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="field" style={{ marginBottom: 14 }}>
+          <label>ملاحظات (اختياري)</label>
+          <input value={note} onChange={(e) => setNote(e.target.value)} />
+        </div>
+
+        {customer && lines.length > 0 && (
           <div className="pill" style={{ display: 'block', padding: '10px 14px', fontSize: 13.5 }}>
-            الإجمالي بعد خصم {customer.discount_percentage}%: <strong>{lineTotal.toLocaleString('ar-EG')} ج.م</strong>
+            الإجمالي بعد خصم {combinedDiscount}% (ثابت {customer.discount_percentage}% + إضافي {extraDiscount || 0}%): <strong>{total.toLocaleString('ar-EG')} ج.م</strong>
           </div>
         )}
 
         <div className="modal-actions">
-          <button className="btn btn-primary" type="submit" disabled={saving || !customer}>
+          <button className="btn btn-primary" type="submit" disabled={saving || !customer || lines.length === 0}>
             {saving ? 'جاري الحفظ...' : 'تأكيد الأوردر'}
           </button>
           <button className="btn btn-secondary" type="button" onClick={onClose}>إلغاء</button>
