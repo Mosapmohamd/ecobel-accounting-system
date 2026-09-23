@@ -70,6 +70,7 @@ export interface B2BOrder {
   id: string;
   customer_id: string;
   total_amount: number;
+  extra_discount_percentage: number;
   note: string | null;
   created_at: string;
   items: B2BOrderItem[];
@@ -87,6 +88,7 @@ export interface FreeDistribution {
 }
 
 export type FinanceEntryType = 'income' | 'expense';
+export type FinanceSource = 'website' | 'b2b' | 'spending';
 
 export interface FinanceEntry {
   id: string;
@@ -95,6 +97,7 @@ export interface FinanceEntry {
   amount: number;
   description: string | null;
   reference_id: string | null;
+  source: FinanceSource | null;
   entry_date: string;
 }
 
@@ -179,7 +182,7 @@ export const b2bApi = {
     api.patch<B2BCustomer>(`/b2b/customers/${id}`, payload).then((r) => r.data),
   listOrders: (customer_id?: string) =>
     api.get<B2BOrder[]>('/b2b/orders', { params: { customer_id } }).then((r) => r.data),
-  createOrder: (payload: { customer_id: string; items: { product_id: string; quantity: number }[]; note?: string }) =>
+  createOrder: (payload: { customer_id: string; items: { product_id: string; quantity: number }[]; note?: string; extra_discount_percentage?: number }) =>
     api.post<B2BOrder>('/b2b/orders', payload).then((r) => r.data),
 };
 
@@ -196,10 +199,52 @@ export const freeDistributionApi = {
 
 // ---------------- Finance ----------------
 export const financeApi = {
-  list: (params?: { type?: FinanceEntryType }) =>
+  list: (params?: { type?: FinanceEntryType; source?: FinanceSource }) =>
     api.get<FinanceEntry[]>('/finance/entries', { params }).then((r) => r.data),
-  create: (payload: { type: FinanceEntryType; category: string; amount: number; description?: string }) =>
+  create: (payload: { type: FinanceEntryType; category: string; amount: number; description?: string; source?: FinanceSource }) =>
     api.post<FinanceEntry>('/finance/entries', payload).then((r) => r.data),
+};
+
+// ---------------- Shipping rates ----------------
+export interface ShippingRate {
+  id: string;
+  city: string;
+  fee: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export const shippingRatesApi = {
+  list: () => api.get<ShippingRate[]>('/shipping-rates/').then((r) => r.data),
+  create: (payload: { city: string; fee: number }) =>
+    api.post<ShippingRate>('/shipping-rates/', payload).then((r) => r.data),
+  update: (id: string, payload: Partial<{ fee: number; is_active: boolean }>) =>
+    api.patch<ShippingRate>(`/shipping-rates/${id}`, payload).then((r) => r.data),
+  remove: (id: string) => api.delete(`/shipping-rates/${id}`),
+};
+
+// ---------------- Report exports (Excel) ----------------
+function downloadExport(path: string, params?: Record<string, string>) {
+  const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+  const token = localStorage.getItem('ecobel_token');
+  const url = `${API_BASE}${path}${qs}`;
+  fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+    .then((res) => res.blob())
+    .then((blob) => {
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'report.xlsx';
+      link.click();
+      URL.revokeObjectURL(link.href);
+    });
+}
+
+export const reportExportsApi = {
+  finance: (params?: { source?: FinanceSource; type?: FinanceEntryType }) =>
+    downloadExport('/reports/export/finance', params as Record<string, string>),
+  onlineOrders: (status?: string) => downloadExport('/reports/export/online-orders', status ? { status } : undefined),
+  b2bOrders: () => downloadExport('/reports/export/b2b-orders'),
+  inventory: () => downloadExport('/reports/export/inventory'),
 };
 
 // ---------------- Reports ----------------
