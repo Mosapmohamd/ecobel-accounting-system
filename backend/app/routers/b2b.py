@@ -52,9 +52,17 @@ def create_order(payload: schemas.B2BOrderCreate, db: Session = Depends(get_db))
     if not payload.items:
         raise HTTPException(400, "الأوردر لازم يحتوي على منتج واحد على الأقل")
 
-    order = models.B2BOrder(customer_id=customer.id, note=payload.note, total_amount=0)
+    order = models.B2BOrder(
+        customer_id=customer.id, note=payload.note, total_amount=0,
+        extra_discount_percentage=payload.extra_discount_percentage,
+    )
     db.add(order)
     db.flush()  # get order.id without committing
+
+    # The customer's standing discount always applies, plus an optional
+    # one-time extra discount entered manually for this order only — it's
+    # never saved back to the customer's profile.
+    combined_discount = min(100, customer.discount_percentage + payload.extra_discount_percentage)
 
     total = 0.0
     for item_in in payload.items:
@@ -64,10 +72,7 @@ def create_order(payload: schemas.B2BOrderCreate, db: Session = Depends(get_db))
         if item_in.quantity <= 0:
             raise HTTPException(400, "الكمية لازم تكون أكبر من صفر")
 
-        # Discount is always the customer's fixed, pre-agreed rate — applied
-        # automatically, never entered manually per order.
-        discount = customer.discount_percentage
-        line_total = product.sale_price * item_in.quantity * (1 - discount / 100)
+        line_total = product.sale_price * item_in.quantity * (1 - combined_discount / 100)
         total += line_total
 
         order_item = models.B2BOrderItem(
@@ -75,7 +80,7 @@ def create_order(payload: schemas.B2BOrderCreate, db: Session = Depends(get_db))
             product_id=product.id,
             quantity=item_in.quantity,
             unit_price=product.sale_price,
-            discount_percentage=discount,
+            discount_percentage=combined_discount,
             line_total=line_total,
         )
         db.add(order_item)
@@ -95,6 +100,7 @@ def create_order(payload: schemas.B2BOrderCreate, db: Session = Depends(get_db))
         amount=total,
         description=f"أوردر B2B — {customer.name}",
         reference_id=order.id,
+        source="b2b",
     )
     db.add(finance_entry)
 

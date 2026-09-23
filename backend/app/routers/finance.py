@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Literal
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -12,6 +12,7 @@ router = APIRouter(prefix="/finance", tags=["Finance"], dependencies=[Depends(au
 @router.get("/entries", response_model=List[schemas.FinanceEntryOut])
 def list_entries(
     type: Optional[models.FinanceEntryType] = None,
+    source: Optional[Literal["website", "b2b", "spending"]] = None,
     date_from: Optional[datetime] = None,
     date_to: Optional[datetime] = None,
     db: Session = Depends(get_db),
@@ -19,6 +20,13 @@ def list_entries(
     q = db.query(models.FinanceEntry)
     if type:
         q = q.filter(models.FinanceEntry.type == type)
+    if source:
+        if source == "spending":
+            # Old rows predate the `source` column and were always manual
+            # (expense/other) entries — treat NULL the same as "spending".
+            q = q.filter((models.FinanceEntry.source == "spending") | (models.FinanceEntry.source.is_(None)))
+        else:
+            q = q.filter(models.FinanceEntry.source == source)
     if date_from:
         q = q.filter(models.FinanceEntry.entry_date >= date_from)
     if date_to:
