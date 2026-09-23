@@ -310,3 +310,49 @@ export const salesAnalyticsApi = {
   get: (source: SalesSource = 'all') =>
     api.get<SalesAnalytics>('/sales-analytics/', { params: { source } }).then((r) => r.data),
 };
+
+// ---------------- Offers ----------------
+export interface Offer {
+  id: string;
+  product_id: string;
+  title: string;
+  offer_price: number;
+  is_active: boolean;
+  expires_at: string | null;
+  created_at: string;
+}
+
+export const offersApi = {
+  list: () => api.get<Offer[]>('/offers/').then((r) => r.data),
+  create: (payload: { product_id: string; title: string; offer_price: number; expires_at?: string }) =>
+    api.post<Offer>('/offers/', payload).then((r) => r.data),
+  update: (id: string, payload: Partial<{ title: string; offer_price: number; is_active: boolean; expires_at: string | null }>) =>
+    api.patch<Offer>(`/offers/${id}`, payload).then((r) => r.data),
+  remove: (id: string) => api.delete(`/offers/${id}`),
+};
+
+// ---------------- Routines ----------------
+export interface RoutineItem {
+  product_id: string;
+  product_name: string;
+  sale_price: number;
+  image_url: string | null;
+}
+
+export interface Routine {
+  id: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  items: RoutineItem[];
+  created_at: string;
+}
+
+export const routinesApi = {
+  list: () => api.get<Routine[]>('/routines/').then((r) => r.data),
+  create: (payload: { name: string; description?: string; product_ids: string[] }) =>
+    api.post<Routine>('/routines/', payload).then((r) => r.data),
+  update: (id: string, payload: Partial<{ name: string; description: string; is_active: boolean; product_ids: string[] }>) =>
+    api.patch<Routine>(`/routines/${id}`, payload).then((r) => r.data),
+  remove: (id: string) => api.delete(`/routines/${id}`),
+};
