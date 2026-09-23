@@ -45,6 +45,7 @@ class ProductCreate(BaseModel):
     sale_price: float = Field(0, ge=0)
     quantity: int = Field(0, ge=0)
     low_stock_threshold: int = Field(10, ge=0)
+    description: Optional[str] = None
 
 
 class ProductUpdate(BaseModel):
@@ -54,6 +55,7 @@ class ProductUpdate(BaseModel):
     sale_price: Optional[float] = Field(None, ge=0)
     low_stock_threshold: Optional[int] = Field(None, ge=0)
     is_active: Optional[bool] = None
+    description: Optional[str] = None
 
 
 class ProductOut(BaseModel):
@@ -69,6 +71,7 @@ class ProductOut(BaseModel):
     is_active: bool
     stock_status: str
     image_url: Optional[str] = None
+    description: Optional[str] = None
     created_at: datetime
 
 
@@ -311,3 +314,64 @@ class SalesAnalytics(BaseModel):
     orders_by_status: dict[str, int]
     revenue_last_30_days: List[RevenuePoint]
     top_products: List[TopProduct]
+
+
+# ---------------- Online store: offers ----------------
+class OfferCreate(BaseModel):
+    product_id: str
+    title: str
+    offer_price: float = Field(..., gt=0)
+    expires_at: Optional[datetime] = None
+
+
+class OfferUpdate(BaseModel):
+    title: Optional[str] = None
+    offer_price: Optional[float] = Field(None, gt=0)
+    is_active: Optional[bool] = None
+    expires_at: Optional[datetime] = None
+
+
+class OfferOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    product_id: str
+    product_name: str
+    original_price: float
+    image_url: Optional[str] = None
+    title: str
+    offer_price: float
+    is_active: bool
+    expires_at: Optional[datetime]
+    created_at: datetime
+
+
+# ---------------- Online store: routines ----------------
+class RoutineCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    product_ids: List[str] = Field(..., min_length=2, max_length=3)
+
+
+class RoutineUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+    product_ids: Optional[List[str]] = Field(None, min_length=2, max_length=3)
+
+
+class RoutineItemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    product_id: str
+    product_name: str
+    sale_price: float
+    image_url: Optional[str] = None
+
+
+class RoutineOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    name: str
+    description: Optional[str]
+    is_active: bool
+    items: List[RoutineItemOut]
+    created_at: datetime

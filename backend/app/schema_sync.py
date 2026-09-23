@@ -15,6 +15,7 @@ from sqlalchemy.engine import Engine
 # added to an existing shared/website table's model.
 _COLUMNS_TO_ENSURE = [
     ("products", "image_url", "VARCHAR"),
+    ("products", "description", "TEXT"),
 ]
 
 

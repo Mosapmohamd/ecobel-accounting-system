@@ -58,6 +58,7 @@ class Product(Base):
     low_stock_threshold = Column(Integer, nullable=False, default=10)
     is_active = Column(Boolean, default=True)
     image_url = Column(String, nullable=True)  # product photo, shown on the website
+    description = Column(Text, nullable=True)  # shown on the website's product page
     created_at = Column(DateTime(timezone=True), default=now)
     updated_at = Column(DateTime(timezone=True), default=now, onupdate=now)
 
@@ -288,3 +289,72 @@ class OrderItem(Base):
 
     order = relationship("Order", back_populates="items")
     product = relationship("Product")
+
+
+# ===========================================================================
+# WEBSITE MERCHANDISING — offers (single-product discounts shown on the
+# homepage) and routines (curated 2-3 product bundles). Owned and managed
+# here; the website only reads these to render its homepage sections and
+# to price them correctly at checkout.
+# ===========================================================================
+
+class Offer(Base):
+    __tablename__ = "offers"
+
+    id = Column(String, primary_key=True, default=gen_id)
+    product_id = Column(String, ForeignKey("products.id"), nullable=False)
+    title = Column(String, nullable=False)          # e.g. "خصم الصيف"
+    offer_price = Column(Float, nullable=False)      # the discounted price, shown alongside the original
+    is_active = Column(Boolean, default=True)
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=now)
+
+    product = relationship("Product")
+
+    @property
+    def product_name(self) -> str:
+        return self.product.name if self.product else ""
+
+    @property
+    def original_price(self) -> float:
+        return self.product.sale_price if self.product else 0
+
+    @property
+    def image_url(self) -> str | None:
+        return self.product.image_url if self.product else None
+
+
+class Routine(Base):
+    __tablename__ = "routines"
+
+    id = Column(String, primary_key=True, default=gen_id)
+    name = Column(String, nullable=False)            # e.g. "روتين العناية الصباحي"
+    description = Column(Text, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), default=now)
+
+    items = relationship("RoutineItem", back_populates="routine", cascade="all, delete-orphan", order_by="RoutineItem.position")
+
+
+class RoutineItem(Base):
+    __tablename__ = "routine_items"
+
+    id = Column(String, primary_key=True, default=gen_id)
+    routine_id = Column(String, ForeignKey("routines.id"), nullable=False)
+    product_id = Column(String, ForeignKey("products.id"), nullable=False)
+    position = Column(Integer, nullable=False, default=0)
+
+    routine = relationship("Routine", back_populates="items")
+    product = relationship("Product")
+
+    @property
+    def product_name(self) -> str:
+        return self.product.name if self.product else ""
+
+    @property
+    def sale_price(self) -> float:
+        return self.product.sale_price if self.product else 0
+
+    @property
+    def image_url(self) -> str | None:
+        return self.product.image_url if self.product else None
