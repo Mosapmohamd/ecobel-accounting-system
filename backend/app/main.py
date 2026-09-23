@@ -12,7 +12,7 @@ from .database import engine
 from .schema_sync import ensure_columns
 from .routers import (
     auth_router, categories, products, inventory, b2b, free_distribution,
-    finance, reports, coupons, online_orders, web_analytics,
+    finance, reports, coupons, online_orders, web_analytics, offers, routines,
 )
 from .routers.auth_router import limiter
 
@@ -67,6 +67,8 @@ app.include_router(reports.router)
 app.include_router(coupons.router)
 app.include_router(online_orders.router)
 app.include_router(web_analytics.router)
+app.include_router(offers.router)
+app.include_router(routines.router)
 
 
 @app.get("/")
