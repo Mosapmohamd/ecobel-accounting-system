@@ -18,3 +18,4 @@ starlette==1.6.0
 uvicorn==0.53.0
 bcrypt==4.0.1
 python-dotenv==1.2.3
+openpyxl==3.1.5
