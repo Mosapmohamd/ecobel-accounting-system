@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum as PyEnum
-from typing import Optional, List
+from typing import Optional, List, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from .models import MovementType, RecipientType, FinanceEntryType, CouponDiscountType, OrderStatus
@@ -127,6 +127,7 @@ class B2BOrderCreate(BaseModel):
     customer_id: str
     items: List[B2BOrderItemIn]
     note: Optional[str] = None
+    extra_discount_percentage: float = Field(0, ge=0, le=100, description="One-time extra discount for this order only — entered manually, on top of the customer's standing discount")
 
 
 class B2BOrderItemOut(BaseModel):
@@ -143,6 +144,7 @@ class B2BOrderOut(BaseModel):
     id: str
     customer_id: str
     total_amount: float
+    extra_discount_percentage: float
     note: Optional[str]
     created_at: datetime
     items: List[B2BOrderItemOut]
@@ -184,6 +186,7 @@ class FinanceEntryCreate(BaseModel):
     amount: float = Field(..., gt=0)
     description: Optional[str] = None
     entry_date: Optional[datetime] = None
+    source: Literal["website", "b2b", "spending"] = "spending"
 
 
 class FinanceEntryOut(BaseModel):
@@ -194,6 +197,7 @@ class FinanceEntryOut(BaseModel):
     amount: float
     description: Optional[str]
     reference_id: Optional[str]
+    source: Optional[str] = None
     entry_date: datetime
 
 
@@ -279,6 +283,7 @@ class OnlineOrderOut(BaseModel):
     order_number: str
     customer_name: str
     customer_phone: str
+    city: Optional[str] = None
     shipping_address: str
     status: OrderStatus
     payment_method: str
@@ -374,4 +379,24 @@ class RoutineOut(BaseModel):
     description: Optional[str]
     is_active: bool
     items: List[RoutineItemOut]
+    created_at: datetime
+
+
+# ---------------- Shipping rates (delivery fee by city) ----------------
+class ShippingRateCreate(BaseModel):
+    city: str
+    fee: float = Field(..., ge=0)
+
+
+class ShippingRateUpdate(BaseModel):
+    fee: Optional[float] = Field(None, ge=0)
+    is_active: Optional[bool] = None
+
+
+class ShippingRateOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    city: str
+    fee: float
+    is_active: bool
     created_at: datetime

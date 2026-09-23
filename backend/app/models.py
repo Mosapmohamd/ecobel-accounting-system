@@ -125,6 +125,7 @@ class B2BOrder(Base):
     id = Column(String, primary_key=True, default=gen_id)
     customer_id = Column(String, ForeignKey("b2b_customers.id"), nullable=False)
     total_amount = Column(Float, nullable=False, default=0)  # after customer's discount
+    extra_discount_percentage = Column(Float, nullable=False, default=0)  # one-time, entered manually per order — on top of the customer's standing discount
     note = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=now)
 
@@ -195,7 +196,8 @@ class FinanceEntry(Base):
     category = Column(String, nullable=False)   # e.g. "مبيعات الموقع", "مواد خام", "شحن", "أخرى"
     amount = Column(Float, nullable=False)
     description = Column(Text, nullable=True)
-    reference_id = Column(String, nullable=True)  # links to a B2BOrder id, etc. when applicable
+    reference_id = Column(String, nullable=True)  # links to a B2BOrder id, website Order id, etc.
+    source = Column(String, nullable=True)  # "website" | "b2b" | "spending" — NULL (old rows) is treated as "spending"
     entry_date = Column(DateTime(timezone=True), default=now)
     created_at = Column(DateTime(timezone=True), default=now)
 
@@ -256,6 +258,7 @@ class Order(Base):
 
     customer_name = Column(String, nullable=False)
     customer_phone = Column(String, nullable=False)
+    city = Column(String, nullable=True)
     shipping_address = Column(Text, nullable=False)
 
     status = Column(Enum(OrderStatus), nullable=False, default=OrderStatus.pending)
@@ -358,3 +361,15 @@ class RoutineItem(Base):
     @property
     def image_url(self) -> str | None:
         return self.product.image_url if self.product else None
+
+
+class ShippingRate(Base):
+    """City -> delivery fee, set by the admin. Looked up at checkout on the
+    website; a city with no row here falls back to a default fee there."""
+    __tablename__ = "shipping_rates"
+
+    id = Column(String, primary_key=True, default=gen_id)
+    city = Column(String, unique=True, nullable=False)
+    fee = Column(Float, nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), default=now)
