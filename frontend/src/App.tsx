@@ -12,6 +12,8 @@ import OnlineOrdersPage from './pages/OnlineOrdersPage';
 import SalesAnalyticsPage from './pages/SalesAnalyticsPage';
 import OffersPage from './pages/OffersPage';
 import RoutinesPage from './pages/RoutinesPage';
+import ShippingRatesPage from './pages/ShippingRatesPage';
+import ReportsPage from './pages/ReportsPage';
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
   const { isAuthenticated } = useAuth();
@@ -41,6 +43,8 @@ function AppRoutes() {
         <Route path="sales-analytics" element={<SalesAnalyticsPage />} />
         <Route path="offers" element={<OffersPage />} />
         <Route path="routines" element={<RoutinesPage />} />
+        <Route path="shipping-rates" element={<ShippingRatesPage />} />
+        <Route path="reports" element={<ReportsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
