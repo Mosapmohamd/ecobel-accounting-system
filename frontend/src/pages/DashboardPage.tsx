@@ -108,7 +108,7 @@ export default function DashboardPage() {
                   <XAxis dataKey="month" stroke="#8a8074" fontSize={12} />
                   <YAxis stroke="#8a8074" fontSize={12} />
                   <Tooltip formatter={(v) => money(Number(v))} />
-                  <Bar dataKey="total" fill="#c9a227" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="total" fill="#b5566b" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
