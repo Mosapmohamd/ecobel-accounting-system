@@ -44,8 +44,8 @@ export default function LoginPage() {
           maxWidth: 380,
         }}
       >
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ color: 'var(--gold)', fontWeight: 700, fontSize: 14, marginBottom: 6 }}>Eco Bel</div>
+        <div style={{ marginBottom: 28, textAlign: 'center' }}>
+          <img src="/logo/ecobel-mark-black.png" alt="Eco Bel" style={{ height: 48, width: 'auto', marginBottom: 12 }} />
           <h1 style={{ fontSize: 26, color: 'var(--forest-deep)' }}>سيستم الحسابات والمخزون</h1>
         </div>
 

@@ -43,7 +43,8 @@ export default function Layout() {
     <div className="shell">
       <aside className="sidebar">
         <div className="logo">
-          <LeafIcon /> Eco Bel
+          {/* eslint-disable-next-line jsx-a11y/alt-text */}
+          <img src="/logo/ecobel-mark-white.png" style={{ height: 26, width: 'auto' }} /> Eco Bel
         </div>
         {navItems.map((section, i) => (
           <div className="nav-group" key={i}>
@@ -83,13 +84,6 @@ export default function Layout() {
   );
 }
 
-function LeafIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-      <path d="M12 2C9 6 7 9 7 13a5 5 0 0 0 10 0c0-4-2-7-5-11Z" fill="#E39AA6" />
-    </svg>
-  );
-}
 function DashboardIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
