@@ -14,6 +14,7 @@ import OffersPage from './pages/OffersPage';
 import RoutinesPage from './pages/RoutinesPage';
 import ShippingRatesPage from './pages/ShippingRatesPage';
 import ReportsPage from './pages/ReportsPage';
+import ReviewsPage from './pages/ReviewsPage';
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
   const { isAuthenticated } = useAuth();
@@ -45,6 +46,7 @@ function AppRoutes() {
         <Route path="routines" element={<RoutinesPage />} />
         <Route path="shipping-rates" element={<ShippingRatesPage />} />
         <Route path="reports" element={<ReportsPage />} />
+        <Route path="reviews" element={<ReviewsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

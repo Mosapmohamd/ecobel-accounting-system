@@ -29,6 +29,7 @@ const navItems = [
       { to: '/routines', label: 'الروتين', icon: SparkleIcon },
       { to: '/coupons', label: 'الكوبونات', icon: TagIcon },
       { to: '/shipping-rates', label: 'أسعار الشحن', icon: TruckIcon },
+      { to: '/reviews', label: 'تقييمات المنتجات', icon: StarIcon },
       { to: '/sales-analytics', label: 'تحليلات المبيعات', icon: ChartIcon },
     ],
   },
@@ -159,6 +160,13 @@ function ReportIcon() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Z" />
       <path d="M14 2v6h6M9 13h6M9 17h6M9 9h1" />
+    </svg>
+  );
+}
+function StarIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2Z" />
     </svg>
   );
 }

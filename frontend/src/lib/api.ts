@@ -401,3 +401,22 @@ export const routinesApi = {
     api.patch<Routine>(`/routines/${id}`, payload).then((r) => r.data),
   remove: (id: string) => api.delete(`/routines/${id}`),
 };
+
+// ---------------- Reviews moderation ----------------
+export interface Review {
+  id: string;
+  product_id: string;
+  product_name: string;
+  customer_name: string;
+  rating: number;
+  comment: string | null;
+  is_approved: boolean;
+  created_at: string;
+}
+
+export const reviewsApi = {
+  list: (isApproved?: boolean) =>
+    api.get<Review[]>('/reviews/', { params: isApproved === undefined ? undefined : { is_approved: isApproved } }).then((r) => r.data),
+  approve: (id: string) => api.post<Review>(`/reviews/${id}/approve`).then((r) => r.data),
+  remove: (id: string) => api.delete(`/reviews/${id}`),
+};
