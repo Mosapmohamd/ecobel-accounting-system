@@ -400,3 +400,16 @@ class ShippingRateOut(BaseModel):
     fee: float
     is_active: bool
     created_at: datetime
+
+
+# ---------------- Reviews moderation ----------------
+class ReviewAdminOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    product_id: str
+    product_name: str
+    customer_name: str
+    rating: int
+    comment: Optional[str]
+    is_approved: bool
+    created_at: datetime

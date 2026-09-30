@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import (
-    Column, String, Integer, Float, DateTime, ForeignKey, Enum, Text, Boolean
+    Column, String, Integer, Float, DateTime, ForeignKey, Enum, Text, Boolean, UniqueConstraint
 )
 from sqlalchemy.orm import relationship
 
@@ -373,3 +373,30 @@ class ShippingRate(Base):
     fee = Column(Float, nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=now)
+
+
+class Review(Base):
+    """Mirrored from ecobel-website, which creates these (verified purchase
+    required). This system owns moderation — a review stays hidden from
+    the public until is_approved is set true here."""
+    __tablename__ = "reviews"
+    __table_args__ = (UniqueConstraint("customer_id", "product_id", name="uq_review_customer_product"),)
+
+    id = Column(String, primary_key=True, default=gen_id)
+    product_id = Column(String, ForeignKey("products.id"), nullable=False)
+    customer_id = Column(String, ForeignKey("customers.id"), nullable=False)
+    rating = Column(Integer, nullable=False)  # 1-5
+    comment = Column(Text, nullable=True)
+    is_approved = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime(timezone=True), default=now)
+
+    product = relationship("Product")
+    customer = relationship("Customer")
+
+    @property
+    def customer_name(self) -> str:
+        return self.customer.name if self.customer else ""
+
+    @property
+    def product_name(self) -> str:
+        return self.product.name if self.product else ""
