@@ -18,6 +18,23 @@ SOURCE_LABEL = {"website": "الموقع", "b2b": "جملة B2B", "spending": "�
 STATUS_LABEL = {"pending": "قيد التجهيز", "shipped": "في الطريق", "delivered": "تم التوصيل", "cancelled": "ملغي"}
 
 
+_FORMULA_PREFIXES = ("=", "+", "-", "@")
+
+
+def _safe_cell(value):
+    """Defuse Excel/CSV formula injection (CWE-1236): a customer-supplied
+    string (name, address, note, ...) that starts with =, +, -, or @ would
+    otherwise be interpreted as a formula the moment staff open the file
+    in Excel. Numbers and non-strings pass through untouched."""
+    if isinstance(value, str) and value.startswith(_FORMULA_PREFIXES):
+        return "'" + value
+    return value
+
+
+def _safe_row(row):
+    return [_safe_cell(v) for v in row]
+
+
 def _xlsx_response(wb: Workbook, filename: str) -> StreamingResponse:
     for ws in wb.worksheets:
         for col_cells in ws.columns:
@@ -64,14 +81,14 @@ def export_finance(
     ws.title = "الحركات المالية"
     ws.append(["النوع", "المصدر", "الفئة", "المبلغ", "الوصف", "التاريخ"])
     for e in entries:
-        ws.append([
+        ws.append(_safe_row([
             FINANCE_TYPE_LABEL.get(e.type.value, e.type.value),
             SOURCE_LABEL.get(e.source, e.source or "مصروفات عامة"),
             e.category,
             e.amount,
             e.description or "",
             e.entry_date.strftime("%Y-%m-%d %H:%M") if e.entry_date else "",
-        ])
+        ]))
     return _xlsx_response(wb, "التقرير_المالي.xlsx")
 
 
@@ -94,12 +111,12 @@ def export_online_orders(
     ])
     for o in orders:
         items_str = " | ".join(f"{it.product_name} × {it.quantity}" for it in o.items)
-        ws.append([
+        ws.append(_safe_row([
             o.order_number, o.customer_name, o.customer_phone, o.city or "", o.shipping_address,
             STATUS_LABEL.get(o.status.value, o.status.value), items_str,
             o.subtotal, o.discount_amount, o.shipping_fee, o.total_amount,
             o.created_at.strftime("%Y-%m-%d %H:%M") if o.created_at else "",
-        ])
+        ]))
     return _xlsx_response(wb, "طلبات_الموقع.xlsx")
 
 
@@ -118,14 +135,14 @@ def export_b2b_orders(db: Session = Depends(get_db)):
     ws.append(["العميل", "المنتجات والكميات", "خصم إضافي لمرة واحدة", "الإجمالي بعد الخصم", "ملاحظات", "التاريخ"])
     for o in orders:
         items_str = " | ".join(f"{it.product_id} × {it.quantity}" for it in o.items)
-        ws.append([
+        ws.append(_safe_row([
             o.customer.name if o.customer else "—",
             items_str,
             f"{o.extra_discount_percentage}%" if o.extra_discount_percentage else "—",
             o.total_amount,
             o.note or "",
             o.created_at.strftime("%Y-%m-%d %H:%M") if o.created_at else "",
-        ])
+        ]))
     return _xlsx_response(wb, "أوردرات_B2B.xlsx")
 
 
@@ -139,9 +156,9 @@ def export_inventory(db: Session = Depends(get_db)):
     ws.append(["المنتج", "الفئة", "SKU", "سعر البيع", "الكمية", "حد إعادة الطلب", "الحالة", "نشط"])
     for p in products:
         status_ar = {"ok": "متوفر", "low": "منخفض", "out": "نفذ"}[p.stock_status]
-        ws.append([
+        ws.append(_safe_row([
             p.name, p.category.name if p.category else "", p.sku or "",
             p.sale_price, p.quantity, p.low_stock_threshold, status_ar,
             "نعم" if p.is_active else "لا",
-        ])
+        ]))
     return _xlsx_response(wb, "تقرير_المخزون.xlsx")
