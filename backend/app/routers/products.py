@@ -124,6 +124,18 @@ async def upload_product_image(product_id: str, file: UploadFile = File(...), db
     if len(contents) > MAX_IMAGE_BYTES:
         raise HTTPException(400, "حجم الصورة أكبر من 5 ميجا")
 
+    # The content-type header above is whatever the client claims — never
+    # trust it alone. Actually decode the bytes as an image before saving,
+    # so a non-image file renamed/labeled to look like one can't be stored
+    # (and later served back out) as if it were real image content.
+    try:
+        from PIL import Image
+        import io
+        with Image.open(io.BytesIO(contents)) as img:
+            img.verify()
+    except Exception:
+        raise HTTPException(400, "الملف ده مش صورة صالحة")
+
     products_dir = os.path.join(STATIC_DIR, "products")
     os.makedirs(products_dir, exist_ok=True)
     filename = f"{product.id}-{uuid.uuid4().hex[:8]}{ext}"
