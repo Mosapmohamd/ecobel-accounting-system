@@ -24,6 +24,17 @@ _COLUMNS_TO_ENSURE = [
     ("b2b_orders", "extra_discount_percentage", "FLOAT", "0"),
 ]
 
+# (table, column, old_value, new_value) — for values that used to be valid
+# (an old status/enum name from an earlier version of the app, or data
+# imported from another system) but aren't recognized by the current code
+# anymore. Add an entry here instead of manually patching the database
+# whenever a value like this turns up.
+_LEGACY_VALUES_TO_FIX = [
+    ("orders", "status", "completed", "delivered"),
+    ("orders", "status", "refunded", "cancelled"),
+    ("orders", "status", "processing", "pending"),
+]
+
 
 def ensure_columns(engine: Engine) -> None:
     inspector = inspect(engine)
@@ -39,3 +50,15 @@ def ensure_columns(engine: Engine) -> None:
             conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {column_type}"))
             if default is not None:
                 conn.execute(text(f"UPDATE {table} SET {column} = {default} WHERE {column} IS NULL"))
+
+        for table, column, old_value, new_value in _LEGACY_VALUES_TO_FIX:
+            if table not in existing_tables:
+                continue
+            # CAST(... AS TEXT) matters on PostgreSQL: the column is a
+            # native ENUM there, and comparing it directly to a label
+            # that isn't part of the enum ("completed") raises "invalid
+            # input value for enum" instead of just matching no rows.
+            conn.execute(
+                text(f"UPDATE {table} SET {column} = :new_value WHERE CAST({column} AS TEXT) = :old_value"),
+                {"new_value": new_value, "old_value": old_value},
+            )
