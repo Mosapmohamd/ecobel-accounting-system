@@ -131,7 +131,7 @@ throwaway databases; they are not part of this repository.
 
 ## Checkpoint commit
 
-See the commit that adds this file (`git log --follow docs/PHASES.md`).
+`fb7b4f5` — *feat: EcoBel Phases 1-4 checkpoint* (Phases 1, 2, 3 incl. the fix batch, and 4, plus the earlier uncommitted pre-Phase-1 work). Branch `phase-1-4-final`.
 
 ## Current status
 
