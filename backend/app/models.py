@@ -3,11 +3,13 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import (
-    Column, String, Integer, Float, DateTime, ForeignKey, Enum, Text, Boolean, UniqueConstraint
+    Column, String, Integer, Float, DateTime, ForeignKey, Enum, Text, Boolean, UniqueConstraint,
+    CheckConstraint, Index, text,
 )
 from sqlalchemy.orm import relationship
 
 from .database import Base
+from .product_images import public_url
 
 
 def gen_id() -> str:
@@ -57,7 +59,9 @@ class Product(Base):
     quantity = Column(Integer, nullable=False, default=0)      # الكمية الحالية بالمخزن
     low_stock_threshold = Column(Integer, nullable=False, default=10)
     is_active = Column(Boolean, default=True)
-    image_url = Column(String, nullable=True)  # product photo, shown on the website
+    # Storage key of the product photo ("products/<id>/<random>.<ext>") —
+    # see app/product_images.py; `image_url` is the public URL built from it.
+    image_key = Column(String, nullable=True)
     description = Column(Text, nullable=True)  # shown on the website's product page
     created_at = Column(DateTime(timezone=True), default=now)
     updated_at = Column(DateTime(timezone=True), default=now, onupdate=now)
@@ -77,6 +81,10 @@ class Product(Base):
     def category_name(self) -> str:
         return self.category.name if self.category else ""
 
+    @property
+    def image_url(self) -> str | None:
+        return public_url(self.image_key)
+
 
 class MovementType(str, enum.Enum):
     restock = "restock"                    # وارد جديد للمخزون
@@ -94,7 +102,7 @@ class InventoryMovement(Base):
 
     id = Column(String, primary_key=True, default=gen_id)
     product_id = Column(String, ForeignKey("products.id"), nullable=False)
-    type = Column(Enum(MovementType), nullable=False)
+    type = Column(Enum(MovementType, native_enum=False), nullable=False)
     quantity_change = Column(Integer, nullable=False)  # negative = stock out, positive = stock in
     reference_id = Column(String, nullable=True)        # e.g. B2BOrder.id or FreeDistribution.id
     note = Column(Text, nullable=True)
@@ -161,7 +169,7 @@ class FreeDistribution(Base):
 
     id = Column(String, primary_key=True, default=gen_id)
     recipient_name = Column(String, nullable=False)
-    recipient_type = Column(Enum(RecipientType), nullable=False)
+    recipient_type = Column(Enum(RecipientType, native_enum=False), nullable=False)
     note = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=now)
 
@@ -192,7 +200,7 @@ class FinanceEntry(Base):
     __tablename__ = "finance_entries"
 
     id = Column(String, primary_key=True, default=gen_id)
-    type = Column(Enum(FinanceEntryType), nullable=False)
+    type = Column(Enum(FinanceEntryType, native_enum=False), nullable=False)
     category = Column(String, nullable=False)   # e.g. "مبيعات الموقع", "مواد خام", "شحن", "أخرى"
     amount = Column(Float, nullable=False)
     description = Column(Text, nullable=True)
@@ -209,14 +217,26 @@ class FinanceEntry(Base):
 # ===========================================================================
 
 class Customer(Base):
+    """Two kinds of row that are never merged: an account (has a password,
+    signs in, owns the orders it places while signed in) and a guest
+    profile (no password; groups the guest orders placed with one phone).
+    A phone number alone never proves ownership, so guest checkout never
+    touches an account and registering never takes over a guest profile.
+    At most one account and one guest profile per phone."""
     __tablename__ = "customers"
+    __table_args__ = (
+        Index("uq_customers_account_phone", "phone", unique=True,
+              postgresql_where=text("hashed_password IS NOT NULL"), sqlite_where=text("hashed_password IS NOT NULL")),
+        Index("uq_customers_guest_phone", "phone", unique=True,
+              postgresql_where=text("hashed_password IS NULL"), sqlite_where=text("hashed_password IS NULL")),
+    )
 
     id = Column(String, primary_key=True, default=gen_id)
     name = Column(String, nullable=False)
     phone = Column(String, nullable=False, index=True)
     email = Column(String, nullable=True)
     address = Column(Text, nullable=True)
-    hashed_password = Column(String, nullable=True)  # nullable = guest checkout
+    hashed_password = Column(String, nullable=True)  # NULL = guest profile
     created_at = Column(DateTime(timezone=True), default=now)
 
     orders = relationship("Order", back_populates="customer")
@@ -232,7 +252,7 @@ class Coupon(Base):
 
     id = Column(String, primary_key=True, default=gen_id)
     code = Column(String, unique=True, nullable=False, index=True)
-    discount_type = Column(Enum(CouponDiscountType), nullable=False)
+    discount_type = Column(Enum(CouponDiscountType, native_enum=False), nullable=False)
     discount_value = Column(Float, nullable=False)
     min_order_amount = Column(Float, nullable=False, default=0)
     max_uses = Column(Integer, nullable=True)
@@ -261,7 +281,7 @@ class Order(Base):
     city = Column(String, nullable=True)
     shipping_address = Column(Text, nullable=False)
 
-    status = Column(Enum(OrderStatus), nullable=False, default=OrderStatus.pending)
+    status = Column(Enum(OrderStatus, native_enum=False), nullable=False, default=OrderStatus.pending)
     payment_method = Column(String, nullable=False, default="cash_on_delivery")
 
     subtotal = Column(Float, nullable=False, default=0)
@@ -400,3 +420,41 @@ class Review(Base):
     @property
     def product_name(self) -> str:
         return self.product.name if self.product else ""
+
+
+# ===========================================================================
+# HOMEPAGE MERCHANDISING — owned and managed by ecobel-accounting-system
+# (المتجر الإلكتروني ← واجهة المتجر); the website only reads these.
+# One row per homepage slot: `position` is the display order (1 = first),
+# and a product/routine can hold at most one slot. The CHECK constraints
+# cap the homepage at 8 featured products and 2 featured routines.
+# ===========================================================================
+
+FEATURED_PRODUCTS_MAX = 8
+FEATURED_ROUTINES_MAX = 2
+
+
+class FeaturedProduct(Base):
+    __tablename__ = "featured_products"
+    __table_args__ = (
+        CheckConstraint(f"position BETWEEN 1 AND {FEATURED_PRODUCTS_MAX}", name="ck_featured_products_position"),
+    )
+
+    position = Column(Integer, primary_key=True, autoincrement=False)
+    product_id = Column(String, ForeignKey("products.id", ondelete="CASCADE"), unique=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=now)
+
+    product = relationship("Product")
+
+
+class FeaturedRoutine(Base):
+    __tablename__ = "featured_routines"
+    __table_args__ = (
+        CheckConstraint(f"position BETWEEN 1 AND {FEATURED_ROUTINES_MAX}", name="ck_featured_routines_position"),
+    )
+
+    position = Column(Integer, primary_key=True, autoincrement=False)
+    routine_id = Column(String, ForeignKey("routines.id", ondelete="CASCADE"), unique=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=now)
+
+    routine = relationship("Routine")

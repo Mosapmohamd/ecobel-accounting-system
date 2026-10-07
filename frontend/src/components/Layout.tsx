@@ -25,6 +25,7 @@ const navItems = [
     group: 'المتجر الإلكتروني',
     items: [
       { to: '/online-orders', label: 'طلبات الموقع', icon: TruckIcon },
+      { to: '/merchandising', label: 'واجهة المتجر', icon: StarIcon },
       { to: '/offers', label: 'العروض', icon: TagIcon },
       { to: '/routines', label: 'الروتين', icon: SparkleIcon },
       { to: '/coupons', label: 'الكوبونات', icon: TagIcon },

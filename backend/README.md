@@ -19,11 +19,10 @@ For local development without PostgreSQL installed, just leave
 `DATABASE_URL` unset — it falls back to a local SQLite file automatically.
 For production, point `DATABASE_URL` at your PostgreSQL instance.
 
-Create the database schema (via Alembic — see below), then create the
-first (and only, for now) user (you'll be prompted for the password):
+Create the first (and only, for now) user (you'll be prompted for the
+password) — this also brings the database schema up to date:
 
 ```bash
-alembic upgrade head
 python create_admin.py admin
 ```
 
@@ -42,21 +41,27 @@ uvicorn app.main:app --reload
 
 Interactive API docs: http://localhost:8000/docs
 
-## Database — no separate migration step
+## Database migrations — one history for the shared database
 
-Schema is created on startup (`Base.metadata.create_all` in `app/main.py`)
-— no Alembic, no `alembic upgrade` to remember to run. `create_all` only
-creates tables that don't exist yet and never touches or drops existing
-ones, so it's safe to run every time the app starts, even against a
-database that already has real data.
+This service owns the **only** migration history (`alembic/versions`) for
+the database it shares with ecobel-website. The website never migrates —
+it only checks, on startup, that the database is at the revision its models
+expect (`EXPECTED_SCHEMA_REVISION` in its `app/database.py`). One history,
+one `alembic_version` table: the collisions that came from each service
+having its own history can't happen.
 
-Adding a new column to an existing table (like `Product.image_url`) needs
-one more step, since `create_all` can't alter a table that's already
-there: add an entry to `_COLUMNS_TO_ENSURE` in `app/schema_sync.py`, and
-`ensure_columns()` (also called on startup, right after `create_all`)
-adds it via `ALTER TABLE` the first time the app runs against a database
-created before that column existed — defensively, skipping any column
-that's already present.
+- **On startup** (and in `create_admin.py` / `seed_data.py`) the app runs
+  `upgrade_to_head` (`app/migrations.py`) — a new database is created,
+  an up-to-date one is left alone.
+- **Changing a model:** edit `app/models.py` here (and the website's mirror
+  of the same table, if it maps it), then
+  `alembic revision --autogenerate -m "..."`, review the script, and bump
+  the website's `EXPECTED_SCHEMA_REVISION` if it maps an affected table.
+  `tests/test_schema.py` fails if migrations and models disagree.
+- **A database that predates migrations** (tables, no `alembic_version`) is
+  refused at startup instead of guessed at: confirm its schema matches
+  `0001_baseline`, run `alembic stamp 0001_baseline` once, then restart.
+- `staff_users` is a legacy table no model uses; migrations ignore it.
 
 ## Sharing a database with ecobel-website
 
@@ -87,9 +92,8 @@ regardless of which repo's folder you run from):
 DATABASE_URL=sqlite:////absolute/path/to/a/shared/ecobel_shared_dev.db
 ```
 
-Start either service first — `create_all` makes every table each service
-knows about, and running the other afterward just fills in the rest
-(nothing gets touched twice).
+Start this service first (or at the same time) — it creates/migrates the
+schema; the website only warns in its log until the schema is ready.
 
 ## Project layout
 
@@ -116,7 +120,7 @@ app/
     reports.py             /reports/dashboard, /reports/monthly-sales
 alembic/
   env.py               Migration environment — wired to app.models + DATABASE_URL
-  versions/            Migration scripts (generated via `alembic revision --autogenerate`)
+  versions/            The shared database's one migration history
 ```
 
 ## Key business rules encoded here

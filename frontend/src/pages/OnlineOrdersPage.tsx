@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useState } from 'react';
 import { onlineOrdersApi, type OnlineOrder, type OnlineOrderStatus } from '../lib/api';
+import { useConfirm } from '../lib/useConfirm';
 
 const statusLabel: Record<OnlineOrderStatus, string> = {
   pending: 'قيد التجهيز',
@@ -9,12 +10,33 @@ const statusLabel: Record<OnlineOrderStatus, string> = {
 };
 const statuses: OnlineOrderStatus[] = ['pending', 'shipped', 'delivered', 'cancelled'];
 
+// Every move is one-way (the backend allows no going back), so each one
+// is confirmed and says what it does.
+const transition: Record<Exclude<OnlineOrderStatus, 'pending'>, { action: string; title: string; message: string }> = {
+  shipped: {
+    action: 'تم الشحن',
+    title: 'تسليم الطلب للشحن؟',
+    message: 'العميلة مش هتقدر تعدّل الطلب أو تلغيه من الموقع بعد كده.',
+  },
+  delivered: {
+    action: 'تم التوصيل',
+    title: 'تأكيد توصيل الطلب؟',
+    message: 'الطلب هيتقفل كـ«تم التوصيل» ومينفعش تتغير حالته بعد كده.',
+  },
+  cancelled: {
+    action: 'إلغاء الطلب',
+    title: 'إلغاء الطلب؟',
+    message: 'الكميات هترجع للمخزون، والكوبون (لو موجود) هيرجع متاح، وهيتسجل عكس للإيراد. الإلغاء نهائي.',
+  },
+};
+
 export default function OnlineOrdersPage() {
   const [orders, setOrders] = useState<OnlineOrder[]>([]);
   const [statusFilter, setStatusFilter] = useState<OnlineOrderStatus | ''>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const confirmDialog = useConfirm();
 
   function load() {
     setLoading(true);
@@ -26,17 +48,23 @@ export default function OnlineOrdersPage() {
   }
   useEffect(load, [statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function changeStatus(id: string, status: OnlineOrderStatus) {
-    try {
-      await onlineOrdersApi.updateStatus(id, status);
-      load();
-    } catch {
-      setError('تعذر تحديث حالة الطلب');
-    }
+  function changeStatus(order: OnlineOrder, status: Exclude<OnlineOrderStatus, 'pending'>) {
+    const t = transition[status];
+    confirmDialog.ask({
+      title: `${t.title} (#${order.order_number})`,
+      message: t.message,
+      confirmLabel: t.action,
+      danger: status === 'cancelled',
+      action: async () => {
+        await onlineOrdersApi.updateStatus(order.id, status);
+        load();
+      },
+    });
   }
 
   return (
     <div>
+      {confirmDialog.dialog}
       <div className="panel">
         <div className="panel-head">
           <div>
@@ -98,15 +126,24 @@ export default function OnlineOrdersPage() {
                     <td>{o.total_amount.toLocaleString('ar-EG')} ج.م</td>
                     <td>{statusLabel[o.status]}</td>
                     <td>
-                      <select
-                        value={o.status}
-                        onChange={(e) => changeStatus(o.id, e.target.value as OnlineOrderStatus)}
-                        style={{ border: '1px solid var(--line)', borderRadius: 6, padding: '5px 8px', fontSize: 13 }}
-                      >
-                        {statuses.map((s) => (
-                          <option key={s} value={s}>{statusLabel[s]}</option>
-                        ))}
-                      </select>
+                      {o.next_statuses.length === 0 ? (
+                        <span style={{ color: '#8a8074', fontSize: 12.5 }}>—</span>
+                      ) : (
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {o.next_statuses.map((s) =>
+                            s === 'pending' ? null : (
+                              <button
+                                key={s}
+                                className={`btn ${s === 'cancelled' ? 'btn-danger' : 'btn-secondary'}`}
+                                style={{ padding: '5px 10px', fontSize: 12.5 }}
+                                onClick={() => changeStatus(o, s)}
+                              >
+                                {transition[s].action}
+                              </button>
+                            ),
+                          )}
+                        </div>
+                      )}
                     </td>
                     <td>
                       <button

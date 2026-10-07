@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { couponsApi, type Coupon, type CouponDiscountType, type CouponLimitType } from '../lib/api';
+import { useConfirm } from '../lib/useConfirm';
 
 export default function CouponsPage() {
+  const confirmDialog = useConfirm();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,10 +54,17 @@ export default function CouponsPage() {
     load();
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm('متأكد إنك عايز تحذف الكوبون ده؟')) return;
-    await couponsApi.remove(id);
-    load();
+  function handleDelete(id: string) {
+    confirmDialog.ask({
+      title: 'حذف الكوبون؟',
+      message: 'الكوبون هيتشال نهائيًا ومحدش هيقدر يستخدمه تاني على الموقع.',
+      confirmLabel: 'حذف الكوبون',
+      danger: true,
+      action: async () => {
+        await couponsApi.remove(id);
+        load();
+      },
+    });
   }
 
   function limitLabel(c: Coupon) {
@@ -72,6 +81,7 @@ export default function CouponsPage() {
 
   return (
     <div>
+      {confirmDialog.dialog}
       <div className="panel">
         <div className="panel-head">
           <div>

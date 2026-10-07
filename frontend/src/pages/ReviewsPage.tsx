@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { reviewsApi, type Review } from '../lib/api';
+import { useConfirm } from '../lib/useConfirm';
 
 const STARS = (n: number) => '★'.repeat(n) + '☆'.repeat(5 - n);
 
 export default function ReviewsPage() {
+  const confirmDialog = useConfirm();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [filter, setFilter] = useState<'pending' | 'approved' | 'all'>('pending');
   const [loading, setLoading] = useState(true);
@@ -20,14 +22,22 @@ export default function ReviewsPage() {
     load();
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm('متأكد إنك عايز تحذف التقييم ده؟')) return;
-    await reviewsApi.remove(id);
-    load();
+  function handleDelete(id: string) {
+    confirmDialog.ask({
+      title: 'حذف التقييم؟',
+      message: 'التقييم هيتشال من صفحة المنتج نهائيًا.',
+      confirmLabel: 'حذف التقييم',
+      danger: true,
+      action: async () => {
+        await reviewsApi.remove(id);
+        load();
+      },
+    });
   }
 
   return (
     <div>
+      {confirmDialog.dialog}
       <div className="panel">
         <div className="panel-head">
           <div>

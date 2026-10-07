@@ -1,4 +1,5 @@
 import os
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -14,9 +15,10 @@ from .database import get_db, DATABASE_URL
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
     if DATABASE_URL.startswith("sqlite"):
-        # Local SQLite is only ever used for development, so a fixed
-        # fallback here is fine — it never reaches a real deployment.
-        SECRET_KEY = "dev-secret-change-in-production"
+        # Local SQLite (development/tests) only: a random key per process.
+        # Never a fixed string in source — anyone can read that, so it
+        # could be used to sign valid tokens. Sessions end on restart.
+        SECRET_KEY = secrets.token_urlsafe(32)
     else:
         # Any non-SQLite DATABASE_URL means a real (likely production)
         # database is configured — refuse to start rather than silently
