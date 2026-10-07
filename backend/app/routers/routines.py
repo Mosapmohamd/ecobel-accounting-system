@@ -70,5 +70,8 @@ def delete_routine(routine_id: str, db: Session = Depends(get_db)):
     routine = db.get(models.Routine, routine_id)
     if not routine:
         raise HTTPException(404, "الروتين غير موجود")
+    # Free its homepage slot too (the FK also cascades on PostgreSQL;
+    # done explicitly so it holds on every database).
+    db.query(models.FeaturedRoutine).filter(models.FeaturedRoutine.routine_id == routine_id).delete()
     db.delete(routine)
     db.commit()

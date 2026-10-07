@@ -51,9 +51,8 @@ itself doesn't manage:
 
 ## Shared database
 
-No Alembic — `Base.metadata.create_all` on startup creates anything
-missing, and a small `schema_sync` helper handles adding columns to
-existing tables and normalizing legacy data values. See
+This service owns the shared database's single Alembic migration history
+and applies it on startup; the website only checks the revision. See
 [`backend/README.md`](./backend/README.md) for the full explanation and
 for exactly which tables this service owns versus which ones the
 website writes to directly.

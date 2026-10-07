@@ -14,10 +14,11 @@ import sys
 import getpass
 
 from app.database import SessionLocal, engine
+from app.migrations import upgrade_to_head
 from app import models, auth
 
-# Ensure tables exist even if the server hasn't been started yet.
-models.Base.metadata.create_all(bind=engine)
+# Bring the schema up to date even if the server hasn't been started yet.
+upgrade_to_head(engine)
 
 
 def main():

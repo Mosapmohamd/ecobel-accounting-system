@@ -1,4 +1,5 @@
 import { Navigate, Route, BrowserRouter, Routes } from 'react-router-dom';
+import { ToastProvider } from './components/Toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
@@ -15,6 +16,7 @@ import RoutinesPage from './pages/RoutinesPage';
 import ShippingRatesPage from './pages/ShippingRatesPage';
 import ReportsPage from './pages/ReportsPage';
 import ReviewsPage from './pages/ReviewsPage';
+import MerchandisingPage from './pages/MerchandisingPage';
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
   const { isAuthenticated } = useAuth();
@@ -47,6 +49,7 @@ function AppRoutes() {
         <Route path="shipping-rates" element={<ShippingRatesPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="reviews" element={<ReviewsPage />} />
+        <Route path="merchandising" element={<MerchandisingPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
@@ -56,9 +59,11 @@ function AppRoutes() {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
+      <ToastProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   );
 }

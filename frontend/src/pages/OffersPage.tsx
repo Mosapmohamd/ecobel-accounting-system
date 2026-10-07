@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { offersApi, productsApi, type Offer, type Product } from '../lib/api';
+import { useConfirm } from '../lib/useConfirm';
 
 export default function OffersPage() {
+  const confirmDialog = useConfirm();
   const [offers, setOffers] = useState<Offer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,10 +50,17 @@ export default function OffersPage() {
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm('متأكد إنك عايز تحذف العرض ده؟')) return;
-    await offersApi.remove(id);
-    load();
+  function handleDelete(id: string) {
+    confirmDialog.ask({
+      title: 'حذف العرض؟',
+      message: 'سعر العرض هيتشال والمنتج هيرجع لسعره العادي على الموقع فورًا.',
+      confirmLabel: 'حذف العرض',
+      danger: true,
+      action: async () => {
+        await offersApi.remove(id);
+        load();
+      },
+    });
   }
 
   async function toggleActive(o: Offer) {
@@ -61,6 +70,7 @@ export default function OffersPage() {
 
   return (
     <div>
+      {confirmDialog.dialog}
       <div className="panel">
         <div className="panel-head">
           <div>

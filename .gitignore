@@ -15,3 +15,14 @@ frontend/preview.log
 
 # OS
 .DS_Store
+
+# Generated caches (any folder)
+**/__pycache__/
+*.pyc
+.pytest_cache/
+backend/.vite/
+
+# Local environment files (never commit real credentials; *.example files stay tracked)
+**/.env
+**/.env.local
+**/.env.*.local

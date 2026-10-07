@@ -2,31 +2,23 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from . import models
 from .database import engine
-from .schema_sync import ensure_columns
+from .migrations import upgrade_to_head
 from .routers import (
     auth_router, categories, products, inventory, b2b, free_distribution,
     finance, reports, coupons, online_orders, web_analytics, offers, routines,
-    shipping_rates, report_exports, reviews,
+    shipping_rates, report_exports, reviews, merchandising,
 )
 from .routers.auth_router import limiter
 
-# Schema is created on startup (no Alembic — same approach as ecobel-website).
-# create_all makes any missing tables without touching existing ones;
-# ensure_columns adds any new columns (e.g. products.image_url) to tables
-# that predate them.
-models.Base.metadata.create_all(bind=engine)
-ensure_columns(engine)
+# This service owns the shared database's one migration history
+# (alembic/versions) — bring the schema to the latest revision on startup.
+upgrade_to_head(engine)
 
-# Product images uploaded from the admin are stored/served here.
-STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
-os.makedirs(os.path.join(STATIC_DIR, "products"), exist_ok=True)
 
 app = FastAPI(
     title="Eco Bel — Accounting & Inventory System",
@@ -55,7 +47,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 app.include_router(auth_router.router)
 app.include_router(categories.router)
@@ -73,6 +64,7 @@ app.include_router(routines.router)
 app.include_router(shipping_rates.router)
 app.include_router(report_exports.router)
 app.include_router(reviews.router)
+app.include_router(merchandising.router)
 
 
 @app.get("/")

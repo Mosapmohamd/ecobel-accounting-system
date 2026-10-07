@@ -8,6 +8,20 @@ from ..database import get_db
 router = APIRouter(prefix="/offers", tags=["Offers"], dependencies=[Depends(auth.get_current_user)])
 
 
+def _ensure_single_active_offer(db: Session, product_id: str, exclude_offer_id: str | None = None) -> None:
+    """A product has at most one active offer, so its storefront price is
+    never ambiguous. Deactivate the old offer before activating a new one."""
+    q = (
+        db.query(models.Offer)
+        .filter(models.Offer.product_id == product_id)
+        .filter(models.Offer.is_active == True)  # noqa: E712
+    )
+    if exclude_offer_id:
+        q = q.filter(models.Offer.id != exclude_offer_id)
+    if q.first():
+        raise HTTPException(400, "المنتج ده عليه عرض شغال بالفعل — وقّفي العرض القديم الأول")
+
+
 @router.get("/", response_model=List[schemas.OfferOut])
 def list_offers(db: Session = Depends(get_db)):
     return db.query(models.Offer).order_by(models.Offer.created_at.desc()).all()
@@ -20,6 +34,7 @@ def create_offer(payload: schemas.OfferCreate, db: Session = Depends(get_db)):
         raise HTTPException(404, "المنتج غير موجود")
     if payload.offer_price >= product.sale_price:
         raise HTTPException(400, "سعر العرض لازم يكون أقل من السعر الأصلي")
+    _ensure_single_active_offer(db, payload.product_id)
 
     offer = models.Offer(
         product_id=payload.product_id,
@@ -42,6 +57,8 @@ def update_offer(offer_id: str, payload: schemas.OfferUpdate, db: Session = Depe
     new_price = data.get("offer_price", offer.offer_price)
     if new_price >= offer.product.sale_price:
         raise HTTPException(400, "سعر العرض لازم يكون أقل من السعر الأصلي")
+    if data.get("is_active", offer.is_active):
+        _ensure_single_active_offer(db, offer.product_id, exclude_offer_id=offer.id)
     for field, value in data.items():
         setattr(offer, field, value)
     db.commit()

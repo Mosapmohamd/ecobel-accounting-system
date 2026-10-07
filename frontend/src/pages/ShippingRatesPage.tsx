@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { shippingRatesApi, type ShippingRate } from '../lib/api';
+import { useConfirm } from '../lib/useConfirm';
 
 export default function ShippingRatesPage() {
+  const confirmDialog = useConfirm();
   const [rates, setRates] = useState<ShippingRate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,20 +43,28 @@ export default function ShippingRatesPage() {
     load();
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm('متأكد إنك عايز تحذف المدينة دي؟')) return;
-    await shippingRatesApi.remove(id);
-    load();
+  function handleDelete(id: string) {
+    confirmDialog.ask({
+      title: 'حذف المحافظة؟',
+      message: 'العملاء مش هيقدروا يطلبوا توصيل للمحافظة دي من الموقع لحد ما تضيفها تاني.',
+      confirmLabel: 'حذف المحافظة',
+      danger: true,
+      action: async () => {
+        await shippingRatesApi.remove(id);
+        load();
+      },
+    });
   }
 
   return (
     <div>
+      {confirmDialog.dialog}
       <div className="panel">
         <div className="panel-head">
           <div>
             <h2>أسعار الشحن</h2>
             <div className="sub" style={{ fontSize: 12.5, color: '#8a8074', marginTop: 2 }}>
-              رسوم التوصيل حسب المدينة — أي مدينة مش موجودة هنا بتاخد الرسم الافتراضي (50 ج.م) على الموقع
+              رسوم التوصيل حسب المحافظة — الموقع بيوصّل بس للمحافظات المفعّلة هنا
             </div>
           </div>
         </div>

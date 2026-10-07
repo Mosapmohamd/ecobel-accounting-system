@@ -22,17 +22,22 @@ def update_order_status(order_id: str, payload: schemas.OnlineOrderStatusUpdate,
         db.query(models.Order)
         .options(joinedload(models.Order.items))
         .filter(models.Order.id == order_id)
+        .with_for_update(of=models.Order)
         .first()
     )
     if not order:
         raise HTTPException(404, "الطلب غير موجود")
+    if payload.status == order.status:
+        return order
+    if payload.status not in schemas.ORDER_TRANSITIONS[order.status]:
+        raise HTTPException(409, "مينفعش الطلب يتنقل للحالة دي من حالته الحالية — يمكن حد تاني غيّرها، حدّث الصفحة")
 
     # Cancelling from here (staff side) needs the same cleanup the customer's
-    # own cancellation does — release the reserved stock and reverse the
-    # revenue — since staff can cancel orders the customer never touched
-    # (failed delivery, out of stock, etc.). Guarded so re-saving an
-    # already-cancelled order doesn't double-release stock or double-reverse.
-    if payload.status == models.OrderStatus.cancelled and order.status != models.OrderStatus.cancelled:
+    # own cancellation does — release the reserved stock, the coupon use and
+    # reverse the revenue — since staff can cancel orders the customer never
+    # touched (failed delivery, out of stock, etc.). The transition rules
+    # above guarantee this runs at most once per order.
+    if payload.status == models.OrderStatus.cancelled:
         for item in order.items:
             product = db.get(models.Product, item.product_id)
             if product:
@@ -40,6 +45,8 @@ def update_order_status(order_id: str, payload: schemas.OnlineOrderStatusUpdate,
                     db, product, item.quantity, models.MovementType.website_sale,
                     reference_id=order.id, note=f"إلغاء طلب #{order.order_number} (من الإدارة)",
                 )
+        if order.coupon is not None and order.coupon.used_count > 0:
+            order.coupon.used_count -= 1
         db.add(models.FinanceEntry(
             type=models.FinanceEntryType.expense,
             category="إلغاء طلب موقع",

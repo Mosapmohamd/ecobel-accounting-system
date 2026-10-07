@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum as PyEnum
 from typing import Optional, List, Literal
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from .models import MovementType, RecipientType, FinanceEntryType, CouponDiscountType, OrderStatus
 
@@ -277,6 +277,17 @@ class OnlineOrderItemOut(BaseModel):
     line_total: float
 
 
+# The order lifecycle. Cancelling releases stock and reverses revenue, so a
+# cancelled order can't be revived (that would sell stock it no longer
+# holds); delivered is final too.
+ORDER_TRANSITIONS: dict[OrderStatus, List[OrderStatus]] = {
+    OrderStatus.pending: [OrderStatus.shipped, OrderStatus.cancelled],
+    OrderStatus.shipped: [OrderStatus.delivered, OrderStatus.cancelled],
+    OrderStatus.delivered: [],
+    OrderStatus.cancelled: [],
+}
+
+
 class OnlineOrderOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: str
@@ -294,6 +305,12 @@ class OnlineOrderOut(BaseModel):
     note: Optional[str]
     created_at: datetime
     items: List[OnlineOrderItemOut]
+
+    @computed_field
+    @property
+    def next_statuses(self) -> List[OrderStatus]:
+        """Where staff can move this order from its current status."""
+        return ORDER_TRANSITIONS[self.status]
 
 
 class OnlineOrderStatusUpdate(BaseModel):
@@ -413,3 +430,29 @@ class ReviewAdminOut(BaseModel):
     comment: Optional[str]
     is_approved: bool
     created_at: datetime
+
+
+# ---------------- Online store: homepage merchandising ----------------
+class FeaturedProductsUpdate(BaseModel):
+    """The complete homepage selection, in display order (first = position 1)."""
+    product_ids: List[str] = Field(..., max_length=8)
+
+
+class FeaturedRoutinesUpdate(BaseModel):
+    routine_ids: List[str] = Field(..., max_length=2)
+
+
+class FeaturedProductSlot(BaseModel):
+    position: int
+    product: ProductOut
+    # False when the product stopped being sellable after it was featured
+    # (deactivated / out of stock) — the storefront skips the slot.
+    is_visible: bool
+    issue: Optional[str] = None
+
+
+class FeaturedRoutineSlot(BaseModel):
+    position: int
+    routine: RoutineOut
+    is_visible: bool
+    issue: Optional[str] = None

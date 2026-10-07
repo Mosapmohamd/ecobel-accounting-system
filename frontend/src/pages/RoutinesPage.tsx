@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { routinesApi, productsApi, type Routine, type Product } from '../lib/api';
+import { useConfirm } from '../lib/useConfirm';
 
 export default function RoutinesPage() {
+  const confirmDialog = useConfirm();
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,10 +53,17 @@ export default function RoutinesPage() {
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm('متأكد إنك عايز تحذف الروتين ده؟')) return;
-    await routinesApi.remove(id);
-    load();
+  function handleDelete(id: string) {
+    confirmDialog.ask({
+      title: 'حذف الروتين؟',
+      message: 'الروتين هيختفي من الموقع، ولو كان معروض في واجهة المتجر هيتشال منها كمان.',
+      confirmLabel: 'حذف الروتين',
+      danger: true,
+      action: async () => {
+        await routinesApi.remove(id);
+        load();
+      },
+    });
   }
 
   async function toggleActive(r: Routine) {
@@ -64,6 +73,7 @@ export default function RoutinesPage() {
 
   return (
     <div>
+      {confirmDialog.dialog}
       <div className="panel">
         <div className="panel-head">
           <div>

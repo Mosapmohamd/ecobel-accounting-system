@@ -25,6 +25,12 @@ api.interceptors.response.use(
   }
 );
 
+/** The backend's own (Arabic) reason for a failed request, or `fallback`. */
+export function apiErrorMessage(err: unknown, fallback: string): string {
+  const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+  return typeof detail === 'string' ? detail : fallback;
+}
+
 // ---------------- Types ----------------
 export type StockStatus = 'ok' | 'low' | 'out';
 
@@ -163,6 +169,7 @@ export const productsApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     }).then((r) => r.data);
   },
+  removeImage: (id: string) => api.delete<Product>(`/products/${id}/image`).then((r) => r.data),
 };
 
 // ---------------- Inventory ----------------
@@ -319,6 +326,8 @@ export interface OnlineOrder {
   note: string | null;
   created_at: string;
   items: OnlineOrderItem[];
+  /** Where staff can move it from here — decided by the backend. */
+  next_statuses: OnlineOrderStatus[];
 }
 
 export const onlineOrdersApi = {
@@ -419,4 +428,32 @@ export const reviewsApi = {
     api.get<Review[]>('/reviews/', { params: isApproved === undefined ? undefined : { is_approved: isApproved } }).then((r) => r.data),
   approve: (id: string) => api.post<Review>(`/reviews/${id}/approve`).then((r) => r.data),
   remove: (id: string) => api.delete(`/reviews/${id}`),
+};
+
+// ---------------- Homepage merchandising ----------------
+export interface FeaturedProductSlot {
+  position: number;
+  product: Product;
+  /** false = no longer sellable; the storefront skips this slot. */
+  is_visible: boolean;
+  issue: string | null;
+}
+
+export interface FeaturedRoutineSlot {
+  position: number;
+  routine: Routine;
+  is_visible: boolean;
+  issue: string | null;
+}
+
+export const FEATURED_PRODUCTS_MAX = 8;
+export const FEATURED_ROUTINES_MAX = 2;
+
+export const merchandisingApi = {
+  featuredProducts: () => api.get<FeaturedProductSlot[]>('/merchandising/featured-products').then((r) => r.data),
+  setFeaturedProducts: (productIds: string[]) =>
+    api.put<FeaturedProductSlot[]>('/merchandising/featured-products', { product_ids: productIds }).then((r) => r.data),
+  featuredRoutines: () => api.get<FeaturedRoutineSlot[]>('/merchandising/featured-routines').then((r) => r.data),
+  setFeaturedRoutines: (routineIds: string[]) =>
+    api.put<FeaturedRoutineSlot[]>('/merchandising/featured-routines', { routine_ids: routineIds }).then((r) => r.data),
 };

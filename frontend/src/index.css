@@ -447,3 +447,47 @@ tr:last-child td {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---- Toasts (components/Toast.tsx) ---- */
+.toast-stack {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(380px, calc(100vw - 40px));
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-inline-start: 4px solid var(--forest);
+  box-shadow: 0 6px 20px rgba(43, 35, 32, 0.12);
+  font-size: 13.5px;
+  color: var(--ink);
+}
+
+.toast-error {
+  border-inline-start-color: var(--rose);
+}
+
+.toast span {
+  flex: 1;
+}
+
+.toast button {
+  background: none;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--ink);
+  opacity: 0.6;
+  cursor: pointer;
+}

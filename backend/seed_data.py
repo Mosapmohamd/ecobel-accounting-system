@@ -22,10 +22,11 @@ from datetime import datetime, timezone
 from dateutil.relativedelta import relativedelta
 
 from app.database import SessionLocal, engine
+from app.migrations import upgrade_to_head
 from app import models
 
-# Ensure tables exist even if the server hasn't been started yet.
-models.Base.metadata.create_all(bind=engine)
+# Bring the schema up to date even if the server hasn't been started yet.
+upgrade_to_head(engine)
 
 random.seed(42)  # deterministic output — same data every run on an empty DB
 
