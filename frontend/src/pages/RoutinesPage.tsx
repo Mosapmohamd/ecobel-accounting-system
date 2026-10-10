@@ -78,7 +78,7 @@ export default function RoutinesPage() {
         <div className="panel-head">
           <div>
             <h2>روتينات الموقع</h2>
-            <div className="sub" style={{ fontSize: 12.5, color: '#8a8074', marginTop: 2 }}>
+            <div className="sub" style={{ fontSize: 12.5, color: 'var(--ink-muted)', marginTop: 2 }}>
               مجموعة من 2 أو 3 منتجات من نفس النوع، تظهر كباقة في قسم "الروتين" بالصفحة الرئيسية
             </div>
           </div>
@@ -118,7 +118,7 @@ export default function RoutinesPage() {
                   </button>
                 ))}
               </div>
-              <div className="sub" style={{ fontSize: 12, color: '#8a8074', marginTop: 6 }}>
+              <div className="sub" style={{ fontSize: 12, color: 'var(--ink-muted)', marginTop: 6 }}>
                 {selected.length}/3 منتجات مختارة
               </div>
             </div>
@@ -145,7 +145,7 @@ export default function RoutinesPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <div>
                     <div style={{ fontWeight: 700 }}>{r.name}</div>
-                    {r.description && <div style={{ fontSize: 12.5, color: '#8a8074' }}>{r.description}</div>}
+                    {r.description && <div style={{ fontSize: 12.5, color: 'var(--ink-muted)' }}>{r.description}</div>}
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button className="btn" style={{ padding: '5px 10px', fontSize: 12.5 }} onClick={() => toggleActive(r)}>
@@ -153,14 +153,14 @@ export default function RoutinesPage() {
                     </button>
                     <button
                       className="btn"
-                      style={{ padding: '5px 10px', fontSize: 12.5, background: 'rgba(201,123,138,0.15)', color: 'var(--rose)' }}
+                      style={{ padding: '5px 10px', fontSize: 12.5, background: 'var(--rose-tint)', color: 'var(--rose-text)' }}
                       onClick={() => handleDelete(r.id)}
                     >
                       حذف
                     </button>
                   </div>
                 </div>
-                <div style={{ fontSize: 13, color: '#8a8074' }}>
+                <div style={{ fontSize: 13, color: 'var(--ink-muted)' }}>
                   {r.items.map((it) => it.product_name).join(' + ')}
                 </div>
               </div>

@@ -291,6 +291,10 @@ class Order(Base):
     total_amount = Column(Float, nullable=False, default=0)
 
     note = Column(Text, nullable=True)
+    # HMAC of a guest checkout's IP address (ecobel-website app/abuse_limits.py)
+    # for the per-IP guest order limit — never the raw address. NULL for
+    # signed-in customers' orders.
+    client_ip_hash = Column(String(64), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), default=now)
     updated_at = Column(DateTime(timezone=True), default=now, onupdate=now)
 
@@ -458,3 +462,16 @@ class FeaturedRoutine(Base):
     created_at = Column(DateTime(timezone=True), default=now)
 
     routine = relationship("Routine")
+
+
+class AuthThrottle(Base):
+    """Failed sign-ins per account identifier, shared by every server
+    process (customer sign-in on the storefront, staff sign-in here).
+    `key` is an HMAC of "<namespace>:<identifier>" — phone numbers and
+    usernames are never stored in clear. Entries expire by time."""
+    __tablename__ = "auth_throttle"
+
+    key = Column(String(64), primary_key=True)
+    failures = Column(Integer, nullable=False, default=0)
+    window_started_at = Column(DateTime(timezone=True), nullable=False, default=now)
+    blocked_until = Column(DateTime(timezone=True), nullable=True)

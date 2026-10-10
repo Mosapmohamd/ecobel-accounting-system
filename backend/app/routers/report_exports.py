@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from io import BytesIO
 from typing import Optional, Literal
 
@@ -8,7 +8,7 @@ from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
 from sqlalchemy.orm import Session, joinedload
 
-from .. import models, auth
+from .. import auth, cairo_time, models
 from ..database import get_db
 
 router = APIRouter(prefix="/reports/export", tags=["Reports"], dependencies=[Depends(auth.get_current_user)])
@@ -19,6 +19,21 @@ STATUS_LABEL = {"pending": "قيد التجهيز", "shipped": "في الطري�
 
 
 _FORMULA_PREFIXES = ("=", "+", "-", "@")
+
+# Every Excel download is named <report>[_<filter>]_<YYYY-MM-DD>.xlsx — ASCII
+# letters, digits, "_" and "-" only, so it's a safe filename on every OS and
+# needs no special header encoding. The date is today's date in Cairo, on any
+# server clock. The admin UI (frontend/src/lib/exportFilename.ts) names its
+# downloads the same way, also with the Cairo date.
+FILTER_SLUG = {"website": "Website", "b2b": "B2B", "spending": "Spending", "income": "Income", "expense": "Expense",
+               "pending": "Pending", "shipped": "Shipped", "delivered": "Delivered", "cancelled": "Cancelled"}
+
+
+def export_filename(report: str, *filters: str | None, today: date | None = None) -> str:
+    """e.g. export_filename("Finance_Report", "website") ->
+    Finance_Report_Website_2026-10-10.xlsx"""
+    parts = [report, *(FILTER_SLUG[f] for f in filters if f)]
+    return f"{'_'.join(parts)}_{(today or cairo_time.cairo_today()).isoformat()}.xlsx"
 
 
 def _safe_cell(value):
@@ -43,14 +58,10 @@ def _xlsx_response(wb: Workbook, filename: str) -> StreamingResponse:
     buf = BytesIO()
     wb.save(buf)
     buf.seek(0)
-    # HTTP headers must be latin-1 — an Arabic filename has to go through
-    # RFC 5987 encoding (filename*=UTF-8''...); a plain ASCII filename is
-    # kept too as a fallback for older clients that don't parse filename*.
-    from urllib.parse import quote
     return StreamingResponse(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename=report.xlsx; filename*=UTF-8''{quote(filename)}"},
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 
@@ -89,7 +100,7 @@ def export_finance(
             e.description or "",
             e.entry_date.strftime("%Y-%m-%d %H:%M") if e.entry_date else "",
         ]))
-    return _xlsx_response(wb, "التقرير_المالي.xlsx")
+    return _xlsx_response(wb, export_filename("Finance_Report", source, type.value if type else None))
 
 
 @router.get("/online-orders")
@@ -117,7 +128,7 @@ def export_online_orders(
             o.subtotal, o.discount_amount, o.shipping_fee, o.total_amount,
             o.created_at.strftime("%Y-%m-%d %H:%M") if o.created_at else "",
         ]))
-    return _xlsx_response(wb, "طلبات_الموقع.xlsx")
+    return _xlsx_response(wb, export_filename("Online_Orders_Report", status.value if status else None))
 
 
 @router.get("/b2b-orders")
@@ -143,7 +154,7 @@ def export_b2b_orders(db: Session = Depends(get_db)):
             o.note or "",
             o.created_at.strftime("%Y-%m-%d %H:%M") if o.created_at else "",
         ]))
-    return _xlsx_response(wb, "أوردرات_B2B.xlsx")
+    return _xlsx_response(wb, export_filename("B2B_Orders_Report"))
 
 
 @router.get("/inventory")
@@ -161,4 +172,4 @@ def export_inventory(db: Session = Depends(get_db)):
             p.sale_price, p.quantity, p.low_stock_threshold, status_ar,
             "نعم" if p.is_active else "لا",
         ]))
-    return _xlsx_response(wb, "تقرير_المخزون.xlsx")
+    return _xlsx_response(wb, export_filename("Inventory_Report"))

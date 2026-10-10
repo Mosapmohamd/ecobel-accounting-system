@@ -26,7 +26,7 @@ export default function FreeDistributionPage() {
         <div className="panel-head">
           <div>
             <h2>التوزيع المجاني (عينات)</h2>
-            <div style={{ fontSize: 12.5, color: '#8a8074', marginTop: 2 }}>
+            <div style={{ fontSize: 12.5, color: 'var(--ink-muted)', marginTop: 2 }}>
               خصم مباشر من المخزون بدون قيمة بيعية — للصيدليات والعملاء المحتملين
             </div>
           </div>

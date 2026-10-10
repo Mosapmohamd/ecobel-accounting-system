@@ -41,11 +41,11 @@ export default function FinancePage() {
       <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
         <div className="kpi-card">
           <div className="label">إجمالي الإيرادات</div>
-          <div className="value" style={{ color: 'var(--ok)' }}>{totalIncome.toLocaleString('ar-EG')} ج.م</div>
+          <div className="value" style={{ color: 'var(--ok-strong)' }}>{totalIncome.toLocaleString('ar-EG')} ج.م</div>
         </div>
         <div className="kpi-card">
           <div className="label">إجمالي المصروفات</div>
-          <div className="value" style={{ color: 'var(--rose)' }}>{totalExpense.toLocaleString('ar-EG')} ج.م</div>
+          <div className="value" style={{ color: 'var(--rose-text)' }}>{totalExpense.toLocaleString('ar-EG')} ج.م</div>
         </div>
         <div className="kpi-card">
           <div className="label">الصافي</div>
@@ -77,7 +77,7 @@ export default function FinancePage() {
                   </td>
                   <td>{e.category}</td>
                   <td>{e.description || '—'}</td>
-                  <td style={{ fontWeight: 700, color: e.type === 'income' ? 'var(--ok)' : 'var(--rose)' }}>
+                  <td style={{ fontWeight: 700, color: e.type === 'income' ? 'var(--ok-strong)' : 'var(--rose-text)' }}>
                     {e.type === 'income' ? '+' : '-'}{e.amount.toLocaleString('ar-EG')} ج.م
                   </td>
                   <td>{new Date(e.entry_date).toLocaleDateString('ar-EG')}</td>

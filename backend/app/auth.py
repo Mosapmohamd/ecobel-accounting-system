@@ -51,9 +51,17 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
+# Checked when there's no such user, so a miss takes as long as a wrong
+# password — response time doesn't reveal which usernames exist.
+_NO_ACCOUNT_HASH = pwd_context.hash("no-such-account")
+
+
 def authenticate_user(db: Session, username: str, password: str) -> Optional[models.User]:
     user = db.query(models.User).filter(models.User.username == username).first()
-    if not user or not verify_password(password, user.hashed_password):
+    if user is None:
+        verify_password(password, _NO_ACCOUNT_HASH)
+        return None
+    if not verify_password(password, user.hashed_password):
         return None
     return user
 

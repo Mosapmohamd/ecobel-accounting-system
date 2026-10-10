@@ -410,7 +410,7 @@ function AdjustStockModal({
 
   return (
     <Modal title={`تسوية مخزون — ${product.name}`} onClose={onClose}>
-      <p style={{ fontSize: 13.5, color: '#8a8074', marginTop: -8 }}>
+      <p style={{ fontSize: 13.5, color: 'var(--ink-muted)', marginTop: -8 }}>
         الكمية الحالية: <strong>{product.quantity}</strong>
       </p>
       <form onSubmit={handleSubmit}>

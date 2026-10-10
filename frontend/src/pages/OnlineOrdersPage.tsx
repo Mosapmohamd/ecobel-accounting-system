@@ -69,7 +69,7 @@ export default function OnlineOrdersPage() {
         <div className="panel-head">
           <div>
             <h2>طلبات الموقع</h2>
-            <div className="sub" style={{ fontSize: 12.5, color: '#8a8074', marginTop: 2 }}>
+            <div className="sub" style={{ fontSize: 12.5, color: 'var(--ink-muted)', marginTop: 2 }}>
               طلبات العملاء من الموقع الإلكتروني (كاش عند الاستلام)
             </div>
           </div>
@@ -121,13 +121,13 @@ export default function OnlineOrdersPage() {
                     <td>
                       {o.customer_name}
                       <br />
-                      <span dir="ltr" style={{ color: '#8a8074', fontSize: 12 }}>{o.customer_phone}</span>
+                      <span dir="ltr" style={{ color: 'var(--ink-muted)', fontSize: 12 }}>{o.customer_phone}</span>
                     </td>
                     <td>{o.total_amount.toLocaleString('ar-EG')} ج.م</td>
                     <td>{statusLabel[o.status]}</td>
                     <td>
                       {o.next_statuses.length === 0 ? (
-                        <span style={{ color: '#8a8074', fontSize: 12.5 }}>—</span>
+                        <span style={{ color: 'var(--ink-muted)', fontSize: 12.5 }}>—</span>
                       ) : (
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           {o.next_statuses.map((s) =>
@@ -175,7 +175,7 @@ export default function OnlineOrdersPage() {
                               </div>
                             ))}
                           </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: '#8a8074' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: 'var(--ink-muted)' }}>
                             <span>الإجمالي الفرعي: {o.subtotal.toLocaleString('ar-EG')} ج.م</span>
                             {o.discount_amount > 0 && <span>الخصم: -{o.discount_amount.toLocaleString('ar-EG')} ج.م</span>}
                             <span>الشحن: {o.shipping_fee === 0 ? 'مجاني' : `${o.shipping_fee} ج.م`}</span>

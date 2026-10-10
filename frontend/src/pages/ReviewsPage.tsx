@@ -42,7 +42,7 @@ export default function ReviewsPage() {
         <div className="panel-head">
           <div>
             <h2>تقييمات المنتجات</h2>
-            <div className="sub" style={{ fontSize: 12.5, color: '#8a8074', marginTop: 2 }}>
+            <div className="sub" style={{ fontSize: 12.5, color: 'var(--ink-muted)', marginTop: 2 }}>
               التقييم مايظهرش للعملاء إلا بعد الموافقة عليه من هنا
             </div>
           </div>
@@ -94,7 +94,7 @@ export default function ReviewsPage() {
                       )}
                       <button
                         className="btn"
-                        style={{ padding: '5px 10px', fontSize: 12.5, background: 'rgba(201,123,138,0.15)', color: 'var(--rose)' }}
+                        style={{ padding: '5px 10px', fontSize: 12.5, background: 'var(--rose-tint)', color: 'var(--rose-text)' }}
                         onClick={() => handleDelete(r.id)}
                       >
                         حذف

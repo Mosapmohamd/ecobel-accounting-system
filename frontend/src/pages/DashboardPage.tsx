@@ -75,7 +75,7 @@ export default function DashboardPage() {
             </div>
             <div className="kpi-card">
               <div className="label">مبيعات الجملة B2B</div>
-              <div className="value" style={{ color: 'var(--ok)' }}>{money(summary.period_b2b_sales)}</div>
+              <div className="value" style={{ color: 'var(--ok-strong)' }}>{money(summary.period_b2b_sales)}</div>
             </div>
             <div className="kpi-card">
               <div className="label">منتجات محتاجة انتباه</div>
@@ -94,7 +94,7 @@ export default function DashboardPage() {
             </div>
             <div className="kpi-card">
               <div className="label">قطع موزَّعة مجانًا {periodNoun(period)}</div>
-              <div className="value" style={{ color: 'var(--rose)' }}>{summary.free_distribution_pieces}</div>
+              <div className="value" style={{ color: 'var(--rose-text)' }}>{summary.free_distribution_pieces}</div>
             </div>
           </div>
 
@@ -105,10 +105,10 @@ export default function DashboardPage() {
             <div className="panel-body" style={{ height: 260 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={monthly}>
-                  <XAxis dataKey="month" stroke="#8a8074" fontSize={12} />
-                  <YAxis stroke="#8a8074" fontSize={12} />
+                  <XAxis dataKey="month" stroke="var(--ink-muted)" fontSize={12} />
+                  <YAxis stroke="var(--ink-muted)" fontSize={12} />
                   <Tooltip formatter={(v) => money(Number(v))} />
-                  <Bar dataKey="total" fill="#b5566b" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="total" fill="var(--forest)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

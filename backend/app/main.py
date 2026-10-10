@@ -6,6 +6,8 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
+from .security import DOCS_SETTINGS, SecurityHeadersMiddleware, check_production_config
+from .auth import SECRET_KEY
 from .database import engine
 from .migrations import upgrade_to_head
 from .routers import (
@@ -21,6 +23,7 @@ upgrade_to_head(engine)
 
 
 app = FastAPI(
+    **DOCS_SETTINGS,  # no public API docs in production
     title="Eco Bel — Accounting & Inventory System",
     description="Backend API for inventory tracking, B2B wholesale sales, "
                 "free sample distribution, finance entries, reports, and "
@@ -38,6 +41,8 @@ app.add_middleware(SlowAPIMiddleware)
 FRONTEND_ORIGINS = os.getenv(
     "FRONTEND_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
 ).split(",")
+FRONTEND_ORIGINS = [o.strip() for o in FRONTEND_ORIGINS if o.strip()]
+check_production_config(SECRET_KEY, FRONTEND_ORIGINS)
 
 app.add_middleware(
     CORSMiddleware,
@@ -46,6 +51,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(SecurityHeadersMiddleware)
 
 
 app.include_router(auth_router.router)

@@ -43,6 +43,10 @@ def main():
     if not password:
         print("Password can't be empty.", file=sys.stderr)
         sys.exit(1)
+    # New staff passwords only; existing staff sign in as before.
+    if len(password) < 8:
+        print("Password must be at least 8 characters.", file=sys.stderr)
+        sys.exit(1)
 
     db = SessionLocal()
     try:
