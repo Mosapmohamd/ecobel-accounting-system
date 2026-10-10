@@ -6,6 +6,18 @@ photo uploads, and order administration. Deploy it **before** the storefront
 API whenever a release adds a migration — the storefront only checks the
 schema revision (`EXPECTED_SCHEMA_REVISION` in ecobel-website).
 
+## Supabase Data API
+
+Neither service uses Supabase's Data API (PostgREST): both backends connect
+to PostgreSQL as the table owner, and the frontends only call the backends.
+Every table in `public` therefore has row-level security on with **no
+policies** (migration `0005_data_api_lockdown` closed the last six), so the
+`anon`/`authenticated` API roles can't read or write anything. A **new
+table** added by a future migration must enable RLS too — Supabase grants the
+API roles full privileges on new tables by default. Check after each
+migration: Supabase advisor "RLS Disabled in Public", or
+`python ops/demo_reset/check_api_roles.py`.
+
 ## Start command (behind a hosting proxy)
 
 ```

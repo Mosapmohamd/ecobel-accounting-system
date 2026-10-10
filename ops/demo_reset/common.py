@@ -78,7 +78,10 @@ def restrict_to_current_user(path: str) -> None:
 
 def structure(cur) -> dict:
     """Schema facts compared between the source and a restored copy."""
-    q = lambda sql: cur.execute(sql) or cur.fetchall()
+    def q(sql):
+        cur.execute(sql)
+        return cur.fetchall()
+
     return {
         "constraints": dict(q("""SELECT contype::text, count(*) FROM pg_constraint
                                  WHERE connamespace = 'public'::regnamespace GROUP BY 1 ORDER BY 1""")),

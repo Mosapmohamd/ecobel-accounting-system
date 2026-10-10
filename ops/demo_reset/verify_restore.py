@@ -48,7 +48,7 @@ def main():
         report(f"sha256 {name}", hashlib.sha256(data).hexdigest() == f["sha256"], f"{len(data):,} bytes")
     for name in [n for n in man["files"] if n.endswith(".dump")]:
         p = common.run([os.path.join(a.pgbin, "pg_restore"), "--list", os.path.join(a.backup, name)], os.environ.copy())
-        report(f"TOC readable {name}", p.returncode == 0, f"{sum(1 for l in p.stdout.splitlines() if l and not l.startswith(';'))} entries")
+        report(f"TOC readable {name}", p.returncode == 0, f"{sum(1 for line in p.stdout.splitlines() if line and not line.startswith(';'))} entries")
 
     target = "verify_" + os.path.basename(os.path.normpath(a.backup)).lower()
     admin = psycopg2.connect(a.admin_dsn)

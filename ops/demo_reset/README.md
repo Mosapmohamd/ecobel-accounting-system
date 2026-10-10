@@ -19,7 +19,7 @@ server watching `backend/` is not restarted by editing them.
 | `backup.py` | no (read-only snapshot) | `pg_dump` (full, public, Supabase metadata) + `manifest.json` (row counts, content md5 per table, schema facts, sha256 per file) |
 | `verify_restore.py` | no | restores `public.dump` into a **new database on an isolated local PostgreSQL 17** and compares everything with the manifest |
 | `reset_seed.py` | **yes** (only with `--execute`) | reset + seed in one transaction; dry run by default |
-| `rls_hardening.sql` | **yes** | separate security change: RLS on the 6 exposed tables |
+| `rls_hardening.sql` | **yes** | the reviewed SQL; applied durably as Alembic migration `0005_data_api_lockdown` (use the migration, not this file) |
 | `check_api_roles.py` | no (probes roll back) | what `anon`/`authenticated` can do on those tables |
 | `common.py` | — | shared helpers; never prints the connection string |
 
@@ -52,8 +52,8 @@ python reset_seed.py --mode reset-seed --expect-manifest D:/Projects/EcoBel/db-b
 python reset_seed.py --mode reset-seed --expect-manifest D:/Projects/EcoBel/db-backups/<stamp>/manifest.json --execute
 # 4. idempotency — must insert 0 rows
 python reset_seed.py --mode seed --execute
-# 5. security (separate change), then confirm "EXPOSED operations: 0"
-psql "<DATABASE_URL>" -v ON_ERROR_STOP=1 -f rls_hardening.sql
+# 5. security: migration 0005 must be applied, then confirm "EXPOSED operations: 0"
+# (done by Alembic migration 0005_data_api_lockdown — the accounting backend applies it on startup)
 python check_api_roles.py
 # 6. post-reset backup + verify (the new recovery point)
 ```

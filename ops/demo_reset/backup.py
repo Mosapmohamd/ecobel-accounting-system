@@ -62,7 +62,7 @@ def main():
                    WHERE r.rolname IN (SELECT DISTINCT grantee FROM information_schema.role_table_grants WHERE table_schema='public')
                       OR r.rolname = current_user ORDER BY 1""")
     with open(os.path.join(out, "roles.txt"), "w", encoding="utf-8") as f:
-        f.writelines(f"{n}\tlogin={l}\tsuper={s}\tbypassrls={b}\n" for n, l, s, b in cur.fetchall())
+        f.writelines(f"{n}\tlogin={login}\tsuper={sup}\tbypassrls={b}\n" for n, login, sup, b in cur.fetchall())
 
     dumps = {
         "full.dump": ["-Fc"],
