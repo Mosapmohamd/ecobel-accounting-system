@@ -15,6 +15,7 @@ if "app.database" not in sys.modules:
 import httpx  # noqa: E402
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
+from jose import jwt  # noqa: E402
 from PIL import Image  # noqa: E402
 
 from app import auth, models, product_images  # noqa: E402
@@ -181,6 +182,11 @@ def test_only_staff_can_upload_or_remove():
     customer = {"Authorization": f"Bearer {auth.create_access_token({'sub': 'cust_1', 'type': 'customer'})}"}
     assert upload(headers=customer).status_code == 401
     assert client.delete("/products/img1/image", headers=customer).status_code == 401
+    # Even when its "sub" names a real staff user (H's user), a non-staff token is refused.
+    impostor = {"Authorization": f"Bearer {auth.create_access_token({'sub': 'img_staff', 'type': 'customer'})}"}
+    assert upload(headers=impostor).status_code == 401
+    untyped = {"Authorization": f"Bearer {jwt.encode({'sub': 'img_staff', 'exp': 4102444800}, auth.SECRET_KEY, algorithm=auth.ALGORITHM)}"}
+    assert upload(headers=untyped).status_code == 401
 
 
 def test_unknown_product_is_404():

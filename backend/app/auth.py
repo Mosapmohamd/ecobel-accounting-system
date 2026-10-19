@@ -46,6 +46,11 @@ def hash_password(password: str) -> str:
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
+    # Every token this service issues is a staff token, and get_current_user
+    # accepts nothing else — so a token from another service that happens to
+    # share the signing key (e.g. a storefront customer token) is never a
+    # staff session, whatever its "sub" says.
+    to_encode.setdefault("type", "staff")
     expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
@@ -74,6 +79,8 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "staff":
+            raise credentials_exception
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception

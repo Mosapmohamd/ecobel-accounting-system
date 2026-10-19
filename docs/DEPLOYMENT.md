@@ -6,6 +6,17 @@ photo uploads, and order administration. Deploy it **before** the storefront
 API whenever a release adds a migration — the storefront only checks the
 schema revision (`EXPECTED_SCHEMA_REVISION` in ecobel-website).
 
+## SECRET_KEY
+
+Signs staff login tokens (and keys the sign-in throttle). Give this service
+its **own** random value — never the storefront's — e.g.
+`python -c "import secrets; print(secrets.token_urlsafe(48))"`. Tokens it
+issues carry `"type": "staff"` and nothing else is accepted, but separate
+keys keep a leak in one service from reaching the other. Production refuses
+to start with a key known to be published (`app/security.py`). Changing the
+key signs every staff member out (they sign in again); throttle counters
+restart, which is harmless.
+
 ## Supabase Data API
 
 Neither service uses Supabase's Data API (PostgREST): both backends connect

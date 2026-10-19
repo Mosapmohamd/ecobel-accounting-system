@@ -22,6 +22,7 @@ import os
 from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException
+from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -41,6 +42,13 @@ MAX_FAILURES = _env_int("STAFF_LOGIN_MAX_FAILURES", 10)
 WINDOW = timedelta(minutes=_env_int("STAFF_LOGIN_FAILURE_WINDOW_MINUTES", 15))
 BLOCK = timedelta(minutes=_env_int("STAFF_LOGIN_BLOCK_MINUTES", 15))
 TOO_MANY = "محاولات دخول كتير — استني ربع ساعة وحاولي تاني"
+
+# Rows nobody has failed on for this long are dropped (each failure purges
+# them), so the table doesn't grow with every identifier ever tried. It's
+# shared with the other service, whose window may differ: a day is longer
+# than either service's window or block is meant to be, and a row whose
+# block hasn't ended yet is always kept.
+STALE_AFTER = max(timedelta(hours=24), WINDOW, BLOCK)
 
 
 def now_utc() -> datetime:
@@ -82,7 +90,15 @@ def record_failure(db: Session, namespace: str, identifier: str) -> None:
             row.failures += 1
         if row.failures >= MAX_FAILURES:
             row.blocked_until = now + BLOCK
+    _purge_stale(db, now)
     db.commit()
+
+
+def _purge_stale(db: Session, now: datetime) -> None:
+    (db.query(AuthThrottle)
+     .filter(AuthThrottle.window_started_at < now - STALE_AFTER)
+     .filter(or_(AuthThrottle.blocked_until.is_(None), AuthThrottle.blocked_until < now))
+     .delete(synchronize_session=False))
 
 
 def record_success(db: Session, namespace: str, identifier: str) -> None:

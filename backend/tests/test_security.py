@@ -1,5 +1,7 @@
 """Production hardening: startup checks, docs switch, response headers."""
+import hashlib
 import importlib
+import logging
 import os
 import sys
 import tempfile
@@ -56,3 +58,32 @@ def test_every_response_carries_security_headers():
     assert res.headers["x-frame-options"] == "DENY"
     assert res.headers["referrer-policy"] == "no-referrer"
     assert res.headers["cache-control"] == "no-store"
+
+
+# A published signing key (git history of these public repos) is refused in
+# production and warned about locally. Tested with a stand-in key whose
+# fingerprint is put on the list — the real one never appears in tests.
+PUBLISHED = "published-stand-in-" + "k" * 40
+
+
+def _publish(module, monkeypatch, key):
+    monkeypatch.setattr(module, "_PUBLISHED_SECRET_KEYS", {hashlib.sha256(key.encode()).hexdigest()})
+
+
+def test_production_refuses_a_published_secret_key(production, monkeypatch):
+    _publish(production, monkeypatch, PUBLISHED)
+    with pytest.raises(RuntimeError, match="published"):
+        production.check_production_config(PUBLISHED, ["https://shop.example"])
+    production.check_production_config(GOOD_SECRET, ["https://shop.example"])  # other keys still fine
+
+
+def test_development_warns_about_a_published_secret_key(monkeypatch, caplog):
+    _publish(security, monkeypatch, PUBLISHED)
+    with caplog.at_level(logging.WARNING):
+        security.check_production_config(PUBLISHED, ["http://localhost:3000"])  # still starts
+    assert "published" in caplog.text
+
+
+def test_published_key_list_holds_fingerprints_only():
+    assert security._PUBLISHED_SECRET_KEYS
+    assert all(len(f) == 64 and all(c in "0123456789abcdef" for c in f) for f in security._PUBLISHED_SECRET_KEYS)

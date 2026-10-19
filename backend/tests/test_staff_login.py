@@ -122,3 +122,22 @@ def test_proxy_headers_from_untrusted_clients_are_ignored():
     codes = [direct.post("/auth/login", data={"username": "sl_proxy_a", "password": "wrong"},
                          headers={"X-Forwarded-For": f"203.0.113.{100 + n}"}).status_code for n in range(6)]
     assert codes == [401] * 5 + [429]
+
+
+def test_stale_throttle_rows_are_purged_but_live_blocks_are_kept():
+    """auth_throttle doesn't grow forever: a failure drops rows idle for
+    longer than STALE_AFTER, never one whose block is still running."""
+    now = login_throttle.now_utc()
+    old = now - login_throttle.STALE_AFTER - timedelta(minutes=1)
+    db = SessionLocal()
+    db.add(models.AuthThrottle(key="stale-staff", failures=3, window_started_at=old))
+    db.add(models.AuthThrottle(key="stale-blocked-staff", failures=10, window_started_at=old, blocked_until=now + timedelta(hours=1)))
+    db.add(models.AuthThrottle(key="recent-staff", failures=2, window_started_at=now - timedelta(minutes=5)))
+    db.commit()
+    db.close()
+    assert login("purge-probe-user", "wrong-password-x").status_code == 401
+    db = SessionLocal()
+    keys = {k for (k,) in db.query(models.AuthThrottle.key).all()}
+    db.close()
+    assert "stale-staff" not in keys
+    assert {"stale-blocked-staff", "recent-staff"} <= keys
