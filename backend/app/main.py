@@ -8,8 +8,8 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from .security import DOCS_SETTINGS, SecurityHeadersMiddleware, check_production_config
 from .auth import SECRET_KEY
-from .database import engine
-from .migrations import upgrade_to_head
+from . import models  # noqa: F401  (registers every table on Base.metadata)
+from .database import check_schema_matches_models
 from .routers import (
     auth_router, categories, products, inventory, b2b, free_distribution,
     finance, reports, coupons, online_orders, web_analytics, offers, routines,
@@ -17,10 +17,10 @@ from .routers import (
 )
 from .routers.auth_router import limiter
 
-# This service owns the shared database's one migration history
-# (alembic/versions) — bring the schema to the latest revision on startup.
-upgrade_to_head(engine)
-
+# The database schema is managed in Supabase (docs/DATABASE_SCHEMA_MANAGEMENT.md).
+# Starting the app never creates, alters or migrates anything — it only warns
+# if the database lacks something these models use.
+check_schema_matches_models()
 
 app = FastAPI(
     **DOCS_SETTINGS,  # no public API docs in production

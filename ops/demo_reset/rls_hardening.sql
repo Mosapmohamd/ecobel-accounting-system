@@ -1,6 +1,6 @@
 -- EcoBel: close the Supabase Data API on the six public tables that had RLS off.
--- Applied durably as Alembic migration 0005_data_api_lockdown (backend/alembic/versions);
--- this file is the reviewed SQL kept for reference.
+-- Superseded by what was applied: docs/schema-changes/2026-10-10_data_api_lockdown.sql
+-- (RLS on every public table). Kept for reference.
 -- (Supabase advisor "rls_disabled_in_public", level ERROR).
 --
 -- Why this is safe for the apps: both backends connect as `postgres`, which owns

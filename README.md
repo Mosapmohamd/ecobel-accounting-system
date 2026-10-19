@@ -51,8 +51,8 @@ itself doesn't manage:
 
 ## Shared database
 
-This service owns the shared database's single Alembic migration history
-and applies it on startup; the website only checks the revision. See
+The schema is managed in Supabase with reviewed SQL — neither service
+changes it (see [`docs/DATABASE_SCHEMA_MANAGEMENT.md`](./docs/DATABASE_SCHEMA_MANAGEMENT.md)). See
 [`backend/README.md`](./backend/README.md) for the full explanation and
 for exactly which tables this service owns versus which ones the
 website writes to directly.

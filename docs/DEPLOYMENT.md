@@ -1,10 +1,11 @@
 # Deploying the accounting backend
 
-This service (`backend/`) is the staff admin API. It owns the shared
-database's migrations (it runs `alembic upgrade head` on startup), product
-photo uploads, and order administration. Deploy it **before** the storefront
-API whenever a release adds a migration — the storefront only checks the
-schema revision (`EXPECTED_SCHEMA_REVISION` in ecobel-website).
+This service (`backend/`) is the staff admin API: product photo uploads,
+order administration, reports. It never changes the database schema — that's
+managed in Supabase with reviewed SQL ([`DATABASE_SCHEMA_MANAGEMENT.md`](./DATABASE_SCHEMA_MANAGEMENT.md)).
+When a release needs a schema change, apply its SQL in Supabase **before**
+deploying either backend; on startup each backend logs a warning if the
+database lacks something its models use.
 
 ## SECRET_KEY
 
@@ -22,11 +23,11 @@ restart, which is harmless.
 Neither service uses Supabase's Data API (PostgREST): both backends connect
 to PostgreSQL as the table owner, and the frontends only call the backends.
 Every table in `public` therefore has row-level security on with **no
-policies** (migration `0005_data_api_lockdown` closed the last six), so the
+policies** (the 2026-10-10 change in `schema-changes/` closed the last six), so the
 `anon`/`authenticated` API roles can't read or write anything. A **new
-table** added by a future migration must enable RLS too — Supabase grants the
+table** added later must enable RLS in its SQL too — Supabase grants the
 API roles full privileges on new tables by default. Check after each
-migration: Supabase advisor "RLS Disabled in Public", or
+schema change: Supabase advisor "RLS Disabled in Public", or
 `python ops/demo_reset/check_api_roles.py`.
 
 ## Start command (behind a hosting proxy)

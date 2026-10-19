@@ -1,6 +1,7 @@
+import logging
 import os
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 # Load backend/.env into the real process environment. Without this,
@@ -48,3 +49,31 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def check_schema_matches_models() -> None:
+    """Read-only and warning-only: logs any table or column these models use
+    that the database lacks (e.g. a reviewed schema change not applied in
+    Supabase yet). Never blocks startup and never changes the schema —
+    that's managed in Supabase (docs/DATABASE_SCHEMA_MANAGEMENT.md)."""
+    log = logging.getLogger("uvicorn.error")
+    try:
+        with engine.connect() as conn:
+            insp = inspect(conn)
+            existing = set(insp.get_table_names())
+            missing = []
+            for table in Base.metadata.sorted_tables:
+                if table.name not in existing:
+                    missing.append(table.name)
+                    continue
+                present = {c["name"] for c in insp.get_columns(table.name)}
+                missing += [f"{table.name}.{c.name}" for c in table.columns if c.name not in present]
+    except Exception as exc:  # database unreachable — requests will report it
+        log.warning("Could not compare the database schema with the models: %s", exc)
+        return
+    if missing:
+        log.warning(
+            "The database schema lacks what this service's models use: %s — apply the "
+            "reviewed schema change in Supabase (docs/DATABASE_SCHEMA_MANAGEMENT.md).",
+            ", ".join(missing),
+        )

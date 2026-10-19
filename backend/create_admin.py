@@ -1,5 +1,6 @@
 """
-Run once (after `alembic upgrade head`) to create the first (and, per
+Run once against a database whose schema already exists (it's managed in
+Supabase — docs/DATABASE_SCHEMA_MANAGEMENT.md) to create the first (and, per
 current scope, only-role) user:
 
     python create_admin.py <username>
@@ -13,12 +14,8 @@ on that machine.
 import sys
 import getpass
 
-from app.database import SessionLocal, engine
-from app.migrations import upgrade_to_head
+from app.database import SessionLocal
 from app import models, auth
-
-# Bring the schema up to date even if the server hasn't been started yet.
-upgrade_to_head(engine)
 
 
 def main():

@@ -41,27 +41,20 @@ uvicorn app.main:app --reload
 
 Interactive API docs: http://localhost:8000/docs
 
-## Database migrations — one history for the shared database
+## Database schema — managed in Supabase
 
-This service owns the **only** migration history (`alembic/versions`) for
-the database it shares with ecobel-website. The website never migrates —
-it only checks, on startup, that the database is at the revision its models
-expect (`EXPECTED_SCHEMA_REVISION` in its `app/database.py`). One history,
-one `alembic_version` table: the collisions that came from each service
-having its own history can't happen.
+The shared database's schema is managed in Supabase with explicit, reviewed
+SQL ([`../docs/DATABASE_SCHEMA_MANAGEMENT.md`](../docs/DATABASE_SCHEMA_MANAGEMENT.md)).
+This service never creates, alters or migrates tables — not on startup and
+not in `create_admin.py` / `seed_data.py`. On startup it only logs a warning
+if the database lacks a table or column the models use.
 
-- **On startup** (and in `create_admin.py` / `seed_data.py`) the app runs
-  `upgrade_to_head` (`app/migrations.py`) — a new database is created,
-  an up-to-date one is left alone.
-- **Changing a model:** edit `app/models.py` here (and the website's mirror
-  of the same table, if it maps it), then
-  `alembic revision --autogenerate -m "..."`, review the script, and bump
-  the website's `EXPECTED_SCHEMA_REVISION` if it maps an affected table.
-  `tests/test_schema.py` fails if migrations and models disagree.
-- **A database that predates migrations** (tables, no `alembic_version`) is
-  refused at startup instead of guessed at: confirm its schema matches
-  `0001_baseline`, run `alembic stamp 0001_baseline` once, then restart.
-- `staff_users` is a legacy table no model uses; migrations ignore it.
+- **Changing a model:** write the SQL change, update `app/models.py` here
+  (and the website's mirror of the same table, if it maps it), review both,
+  apply the SQL in Supabase — see the guide above.
+- Tests build a throwaway SQLite database from the models (`tests/conftest.py`).
+- `staff_users` is a legacy table no model uses; `alembic_version` is legacy
+  metadata from the former Alembic migrations — both are left as they are.
 
 ## Sharing a database with ecobel-website
 
@@ -118,9 +111,6 @@ app/
                           no revenue
     finance.py            /finance/entries — manual income/expense entries
     reports.py             /reports/dashboard, /reports/monthly-sales
-alembic/
-  env.py               Migration environment — wired to app.models + DATABASE_URL
-  versions/            The shared database's one migration history
 ```
 
 ## Key business rules encoded here
