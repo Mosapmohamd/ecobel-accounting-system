@@ -1,8 +1,12 @@
 import { useState } from 'react';
 import { reportExportsApi, type FinanceSource } from '../lib/api';
+import { useToast } from '../lib/toast';
 
 export default function ReportsPage() {
   const [financeSource, setFinanceSource] = useState<FinanceSource | ''>('');
+  const toast = useToast();
+  const exportOrWarn = (run: () => Promise<void>) => () =>
+    run().catch(() => toast('تعذّر تصدير التقرير — حاولي تاني', 'error'));
 
   return (
     <div>
@@ -26,7 +30,7 @@ export default function ReportsPage() {
                   <option value="b2b">إيرادات B2B</option>
                   <option value="spending">المصروفات العامة</option>
                 </select>
-                <button className="btn btn-primary" onClick={() => reportExportsApi.finance(financeSource ? { source: financeSource } : undefined)}>
+                <button className="btn btn-primary" onClick={exportOrWarn(() => reportExportsApi.finance(financeSource ? { source: financeSource } : undefined))}>
                   تصدير Excel
                 </button>
               </div>
@@ -35,17 +39,17 @@ export default function ReportsPage() {
           <ReportRow
             title="طلبات الموقع"
             description="كل طلبات العملاء أونلاين — الاسم، العنوان، المنتجات، الحالة"
-            action={<button className="btn btn-primary" onClick={() => reportExportsApi.onlineOrders()}>تصدير Excel</button>}
+            action={<button className="btn btn-primary" onClick={exportOrWarn(() => reportExportsApi.onlineOrders())}>تصدير Excel</button>}
           />
           <ReportRow
             title="أوردرات B2B"
             description="كل أوردرات عملاء الجملة مع الخصومات المطبّقة"
-            action={<button className="btn btn-primary" onClick={() => reportExportsApi.b2bOrders()}>تصدير Excel</button>}
+            action={<button className="btn btn-primary" onClick={exportOrWarn(() => reportExportsApi.b2bOrders())}>تصدير Excel</button>}
           />
           <ReportRow
             title="تقرير المخزون"
             description="كل المنتجات — الكمية الحالية، حد إعادة الطلب، الحالة"
-            action={<button className="btn btn-primary" onClick={() => reportExportsApi.inventory()}>تصدير Excel</button>}
+            action={<button className="btn btn-primary" onClick={exportOrWarn(() => reportExportsApi.inventory())}>تصدير Excel</button>}
           />
         </div>
       </div>
@@ -63,7 +67,7 @@ function ReportRow({ title, description, action }: { title: string; description:
     >
       <div>
         <div style={{ fontWeight: 700, marginBottom: 4 }}>{title}</div>
-        <div style={{ fontSize: 12.5, color: '#8a8074' }}>{description}</div>
+        <div style={{ fontSize: 12.5, color: 'var(--ink-muted)' }}>{description}</div>
       </div>
       {action}
     </div>

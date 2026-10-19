@@ -1,5 +1,6 @@
 """
-Run once (after `alembic upgrade head`) to create the first (and, per
+Run once against a database whose schema already exists (it's managed in
+Supabase — docs/DATABASE_SCHEMA_MANAGEMENT.md) to create the first (and, per
 current scope, only-role) user:
 
     python create_admin.py <username>
@@ -13,12 +14,8 @@ on that machine.
 import sys
 import getpass
 
-from app.database import SessionLocal, engine
-from app.migrations import upgrade_to_head
+from app.database import SessionLocal
 from app import models, auth
-
-# Bring the schema up to date even if the server hasn't been started yet.
-upgrade_to_head(engine)
 
 
 def main():
@@ -42,6 +39,10 @@ def main():
 
     if not password:
         print("Password can't be empty.", file=sys.stderr)
+        sys.exit(1)
+    # New staff passwords only; existing staff sign in as before.
+    if len(password) < 8:
+        print("Password must be at least 8 characters.", file=sys.stderr)
         sys.exit(1)
 
     db = SessionLocal()

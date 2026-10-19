@@ -28,7 +28,7 @@ function PhotoFrame({ src, alt, size }: { src: string | null; alt: string; size:
       {src ? (
         <img src={src} alt={alt} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
-        <span style={{ fontSize: size > 60 ? 13 : 9, color: '#8a8074' }}>{size > 60 ? 'مفيش صورة' : '+ صورة'}</span>
+        <span style={{ fontSize: size > 60 ? 13 : 9, color: 'var(--ink-muted)' }}>{size > 60 ? 'مفيش صورة' : '+ صورة'}</span>
       )}
     </div>
   );
@@ -124,7 +124,7 @@ function ProductImageManager({ product, onChanged, onClose }: { product: Product
           </div>
           <PhotoFrame src={file ? preview : product.image_url} alt={product.name} size={180} />
         </div>
-        <div style={{ flex: 1, minWidth: 180, fontSize: 13, lineHeight: 1.8, color: '#6c5d58' }}>
+        <div style={{ flex: 1, minWidth: 180, fontSize: 13, lineHeight: 1.8, color: 'var(--ink-muted)' }}>
           JPG أو PNG أو WEBP، حتى 5 ميجا، وأقل ضلع 200 بكسل على الأقل.
           <br />
           الأفضل صورة مربعة بخلفية فاتحة — بتظهر مقصوصة مربع في الموقع.

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { exportFilename } from './exportFilename';
 
 export const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
 
@@ -231,16 +232,22 @@ export const shippingRatesApi = {
 };
 
 // ---------------- Report exports (Excel) ----------------
-function downloadExport(path: string, params?: Record<string, string>) {
+/** Downloads one report as its own .xlsx file. Rejects (and saves nothing)
+ * if the server answers with an error, so an error message is never saved
+ * as a spreadsheet. */
+function downloadExport(path: string, filename: string, params?: Record<string, string>): Promise<void> {
   const qs = params ? '?' + new URLSearchParams(params).toString() : '';
   const token = localStorage.getItem('ecobel_token');
   const url = `${API_BASE}${path}${qs}`;
-  fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-    .then((res) => res.blob())
+  return fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+    .then((res) => {
+      if (!res.ok) throw new Error(`export failed: ${res.status}`);
+      return res.blob();
+    })
     .then((blob) => {
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = 'report.xlsx';
+      link.download = filename;
       link.click();
       URL.revokeObjectURL(link.href);
     });
@@ -248,10 +255,11 @@ function downloadExport(path: string, params?: Record<string, string>) {
 
 export const reportExportsApi = {
   finance: (params?: { source?: FinanceSource; type?: FinanceEntryType }) =>
-    downloadExport('/reports/export/finance', params as Record<string, string>),
-  onlineOrders: (status?: string) => downloadExport('/reports/export/online-orders', status ? { status } : undefined),
-  b2bOrders: () => downloadExport('/reports/export/b2b-orders'),
-  inventory: () => downloadExport('/reports/export/inventory'),
+    downloadExport('/reports/export/finance', exportFilename('Finance_Report', [params?.source, params?.type]), params as Record<string, string>),
+  onlineOrders: (status?: string) =>
+    downloadExport('/reports/export/online-orders', exportFilename('Online_Orders_Report', [status]), status ? { status } : undefined),
+  b2bOrders: () => downloadExport('/reports/export/b2b-orders', exportFilename('B2B_Orders_Report')),
+  inventory: () => downloadExport('/reports/export/inventory', exportFilename('Inventory_Report')),
 };
 
 // ---------------- Reports ----------------
@@ -372,12 +380,21 @@ export interface Offer {
   title: string;
   offer_price: number;
   is_active: boolean;
+  /** Exclusive end instant (UTC). Set from a date, it's the start of the
+   * next Cairo day (backend app/cairo_time.py). */
   expires_at: string | null;
   created_at: string;
+  /** Computed by the backend with the storefront's rule: on and not ended. */
+  is_running: boolean;
+  /** Last Cairo calendar day the offer runs ("YYYY-MM-DD"), or null. */
+  ends_on: string | null;
+  /** True when it runs to the end of `ends_on`; false for an explicit time. */
+  ends_at_day_end: boolean;
 }
 
 export const offersApi = {
   list: () => api.get<Offer[]>('/offers/').then((r) => r.data),
+  /** expires_at: "YYYY-MM-DD" = the offer's last day (runs through that whole day, Cairo time). */
   create: (payload: { product_id: string; title: string; offer_price: number; expires_at?: string }) =>
     api.post<Offer>('/offers/', payload).then((r) => r.data),
   update: (id: string, payload: Partial<{ title: string; offer_price: number; is_active: boolean; expires_at: string | null }>) =>

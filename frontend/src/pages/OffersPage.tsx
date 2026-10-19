@@ -30,14 +30,20 @@ export default function OffersPage() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
+    if (!title.trim()) {
+      setError('اكتبي عنوان للعرض — ده اللي العملاء بيشوفوه جنب السعر');
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
       await offersApi.create({
         product_id: productId,
-        title,
+        title: title.trim(),
         offer_price: Number(offerPrice) || 0,
-        expires_at: expiresAt ? new Date(expiresAt).toISOString() : undefined,
+        // The picked date itself — the backend makes it "through the end of
+        // that day, Cairo time" (app/cairo_time.py).
+        expires_at: expiresAt || undefined,
       });
       setProductId(''); setTitle(''); setOfferPrice(''); setExpiresAt('');
       setShowNew(false);
@@ -63,6 +69,22 @@ export default function OffersPage() {
     });
   }
 
+  /** `is_running` comes from the backend, with the storefront's own rule:
+   * an offer past its end isn't shown there any more, whatever its switch says. */
+  function offerState(o: Offer): 'live' | 'expired' | 'paused' {
+    if (!o.is_active) return 'paused';
+    return o.is_running ? 'live' : 'expired';
+  }
+  function endLabel(o: Offer): string {
+    if (!o.ends_on || !o.expires_at) return '—';
+    if (o.ends_at_day_end) {
+      // ends_on is a calendar date: format it as is, without shifting time zones.
+      return `حتى نهاية ${new Date(`${o.ends_on}T00:00:00Z`).toLocaleDateString('ar-EG', { timeZone: 'UTC' })}`;
+    }
+    return new Date(o.expires_at).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'short', timeStyle: 'short' });
+  }
+  const STATE_LABEL = { live: 'فعّال', expired: 'منتهي', paused: 'موقّف' } as const;
+
   async function toggleActive(o: Offer) {
     await offersApi.update(o.id, { is_active: !o.is_active });
     load();
@@ -75,7 +97,7 @@ export default function OffersPage() {
         <div className="panel-head">
           <div>
             <h2>عروض الموقع</h2>
-            <div className="sub" style={{ fontSize: 12.5, color: '#8a8074', marginTop: 2 }}>
+            <div className="sub" style={{ fontSize: 12.5, color: 'var(--ink-muted)', marginTop: 2 }}>
               خصم مباشر على منتج معين، يظهر في قسم "العروض" بالصفحة الرئيسية
             </div>
           </div>
@@ -107,8 +129,11 @@ export default function OffersPage() {
                 <input type="number" min={0} value={offerPrice} onChange={(e) => setOfferPrice(e.target.value)} required />
               </div>
               <div className="field">
-                <label>تاريخ الانتهاء (اختياري)</label>
-                <input type="date" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} />
+                <label htmlFor="offer-last-day">آخر يوم للعرض (اختياري)</label>
+                <input id="offer-last-day" type="date" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} aria-describedby="offer-last-day-hint" />
+                <div id="offer-last-day-hint" style={{ fontSize: 12, color: 'var(--ink-muted)', marginTop: 4 }}>
+                  العرض يفضل شغال طول اليوم ده، لحد ١٢ بالليل بتوقيت القاهرة
+                </div>
               </div>
             </div>
             <button className="btn btn-primary" style={{ marginTop: 14 }} disabled={saving}>
@@ -129,18 +154,20 @@ export default function OffersPage() {
                 <th>العنوان</th>
                 <th>السعر الأصلي</th>
                 <th>سعر العرض</th>
+                <th>ينتهي</th>
                 <th>الحالة</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {offers.map((o) => (
-                <tr key={o.id} style={{ opacity: o.is_active ? 1 : 0.55 }}>
+                <tr key={o.id} style={{ opacity: offerState(o) === 'live' ? 1 : 0.55 }}>
                   <td style={{ fontWeight: 600 }}>{productName(o.product_id)}</td>
                   <td>{o.title}</td>
-                  <td style={{ textDecoration: 'line-through', color: '#8a8074' }}>{productPrice(o.product_id).toLocaleString('ar-EG')} ج.م</td>
-                  <td style={{ fontWeight: 600, color: 'var(--rose)' }}>{o.offer_price.toLocaleString('ar-EG')} ج.م</td>
-                  <td>{o.is_active ? 'فعّال' : 'موقّف'}</td>
+                  <td style={{ textDecoration: 'line-through', color: 'var(--ink-muted)' }}>{productPrice(o.product_id).toLocaleString('ar-EG')} ج.م</td>
+                  <td style={{ fontWeight: 600, color: 'var(--forest)' }}>{o.offer_price.toLocaleString('ar-EG')} ج.م</td>
+                  <td>{endLabel(o)}</td>
+                  <td>{STATE_LABEL[offerState(o)]}</td>
                   <td>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button className="btn" style={{ padding: '5px 10px', fontSize: 12.5 }} onClick={() => toggleActive(o)}>
@@ -148,7 +175,7 @@ export default function OffersPage() {
                       </button>
                       <button
                         className="btn"
-                        style={{ padding: '5px 10px', fontSize: 12.5, background: 'rgba(201,123,138,0.15)', color: 'var(--rose)' }}
+                        style={{ padding: '5px 10px', fontSize: 12.5, background: 'var(--rose-tint)', color: 'var(--rose-text)' }}
                         onClick={() => handleDelete(o.id)}
                       >
                         حذف

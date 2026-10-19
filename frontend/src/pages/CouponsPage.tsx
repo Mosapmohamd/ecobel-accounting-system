@@ -86,7 +86,7 @@ export default function CouponsPage() {
         <div className="panel-head">
           <div>
             <h2>كوبونات الموقع</h2>
-            <div className="sub" style={{ fontSize: 12.5, color: '#8a8074', marginTop: 2 }}>
+            <div className="sub" style={{ fontSize: 12.5, color: 'var(--ink-muted)', marginTop: 2 }}>
               العميل بيدخل الكود ده وقت الـ checkout على الموقع
             </div>
           </div>
@@ -169,7 +169,7 @@ export default function CouponsPage() {
                   <td>{c.min_order_amount.toLocaleString('ar-EG')} ج.م</td>
                   <td>
                     {limitLabel(c)}
-                    {isExhausted(c) && <span style={{ color: 'var(--rose)', fontSize: 11 }}> (منتهي)</span>}
+                    {isExhausted(c) && <span style={{ color: 'var(--rose-text)', fontSize: 11 }}> (منتهي)</span>}
                   </td>
                   <td>
                     <div style={{ display: 'flex', gap: 8 }}>
@@ -180,7 +180,7 @@ export default function CouponsPage() {
                       )}
                       <button
                         className="btn"
-                        style={{ padding: '5px 10px', fontSize: 12.5, background: 'rgba(201,123,138,0.15)', color: 'var(--rose)' }}
+                        style={{ padding: '5px 10px', fontSize: 12.5, background: 'var(--rose-tint)', color: 'var(--rose-text)' }}
                         onClick={() => handleDelete(c.id)}
                       >
                         حذف

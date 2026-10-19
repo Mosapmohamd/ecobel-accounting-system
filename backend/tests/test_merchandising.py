@@ -103,3 +103,21 @@ def test_only_one_active_offer_per_product():
     assert client.post("/offers/", json={"product_id": "p6", "title": "B", "offer_price": 70}, headers=H).status_code == 201
     # Re-activating the old one while B is active is refused.
     assert client.patch(f"/offers/{first.json()['id']}", json={"is_active": True}, headers=H).status_code == 400
+
+
+def test_expired_offer_no_longer_blocks_a_new_one():
+    """The storefront stops showing an offer at its end date, so the admin
+    treats it as no longer running: a new offer can be added without first
+    pausing the expired one. A dated offer that is still running still blocks."""
+    from datetime import datetime, timedelta, timezone
+    db = SessionLocal()
+    db.add(models.Product(id="p_exp", name="منتج عرض منتهي", category_id="c1", sale_price=100, quantity=5))
+    db.add(models.Offer(id="o_old", product_id="p_exp", title="قديم", offer_price=80,
+                        expires_at=datetime.now(timezone.utc) - timedelta(days=1)))
+    db.commit()
+    db.close()
+    running = client.post("/offers/", json={"product_id": "p_exp", "title": "جديد", "offer_price": 70,
+                                            "expires_at": (datetime.now(timezone.utc) + timedelta(days=3)).isoformat()}, headers=H)
+    assert running.status_code == 201
+    again = client.post("/offers/", json={"product_id": "p_exp", "title": "تالت", "offer_price": 60}, headers=H)
+    assert again.status_code == 400

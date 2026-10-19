@@ -30,7 +30,7 @@ export default function B2BPage() {
         <div className="panel-head">
           <div>
             <h2>عملاء الجملة B2B</h2>
-            <div className="sub" style={{ fontSize: 12.5, color: '#8a8074', marginTop: 2 }}>
+            <div className="sub" style={{ fontSize: 12.5, color: 'var(--ink-muted)', marginTop: 2 }}>
               نسبة الخصم ثابتة لكل عميل وتُحسب تلقائيًا على كل أوردر
             </div>
           </div>
@@ -300,7 +300,7 @@ function NewOrderModal({
             {lines.map((l) => (
               <div key={l.product_id} className="pill" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px' }}>
                 <span>{productName(l.product_id)} × {l.quantity}</span>
-                <button type="button" onClick={() => removeLine(l.product_id)} style={{ color: 'var(--rose)' }}>✕</button>
+                <button type="button" onClick={() => removeLine(l.product_id)} style={{ color: 'var(--rose-text)' }}>✕</button>
               </div>
             ))}
           </div>

@@ -1,24 +1,41 @@
 @import url('https://fonts.googleapis.com/css2?family=Markazi+Text:wght@600;700&family=Tajawal:wght@400;500;700;800&display=swap');
 
 :root {
-  /* Rebrand — rose/blush palette (Sep 2026), replacing forest green + gold,
-     matching the website's rebrand. Variable NAMES are kept (used all over
-     this dashboard) but now map to the new palette — read by role, not by
-     literal name. */
-  --forest: #b5566b;        /* primary brand + action color (was forest green) */
-  --forest-deep: #8e4152;   /* primary hover/pressed */
-  --sage: #a67783;          /* muted secondary accent (was sage green) */
-  --gold: #e39aa6;          /* soft accent (was gold) */
-  --gold-soft: #f3d0d6;     /* focus rings, faint highlights */
-  --parchment: #fbf2f4;     /* subtle blush surface tint (was beige) */
-  --parchment-2: #f6e7ea;   /* deeper blush surface tint */
-  --ink: #2b2320;
+  /* EcoBel identity — taken from the official logo (/Logo.jpg in the project
+     root): rich-black ink #231f20 on a gray gradient #b3b3b3 → #f2f2f2. Same
+     values as the storefront (ecobel-website frontend/src/app/globals.css).
+     Variable NAMES are historical (used all over this dashboard) — read them
+     by role, not by literal name. */
+  --forest: #231f20;        /* primary brand + action color (logo ink) */
+  --forest-deep: #423f40;   /* primary hover/pressed, headings (ramp 15%) */
+  --sage: #615e5f;          /* muted secondary accent, avatar fill (ramp 30%) */
+  --gold: #4c494a;          /* ratings (ramp 20%) — same as the storefront's accent */
+  --gold-soft: #f2f2f2;     /* light text/highlights on dark panels (logo light) */
+  --parchment: #f2f2f2;     /* page background (logo light) */
+  --parchment-2: #ebebeb;   /* chips, inactive toggles (logo gradient) */
+  --ink: #231f20;           /* text (logo ink) */
+  --ink-muted: #615e5f;     /* secondary/meta text (ramp 30%; ≥5:1 on every surface) */
   --cream: #ffffff;
-  --line: rgba(43, 35, 32, 0.12);
+  --line: rgba(35, 31, 32, 0.12);
   --line-dark: rgba(255, 255, 255, 0.18);
-  --rose: #dc4c64;          /* alerts/danger — distinct red-rose */
-  --ok: #6b9c6c;            /* success green — kept: universal UX convention */
-  --warn: #c9862a;          /* warning — kept amber, a status color not a brand color */
+  --focus-ring: #615e5f;    /* input focus outline (6.4:1 on white) */
+  --on-dark-muted: rgba(242, 242, 242, 0.78); /* nav text on the dark sidebar */
+  --on-dark-faint: rgba(242, 242, 242, 0.6);  /* small labels on the dark sidebar */
+  --on-dark-hover: rgba(242, 242, 242, 0.12); /* active/hovered nav item */
+  --overlay: rgba(35, 31, 32, 0.55);          /* modal backdrop */
+  --shadow: rgba(35, 31, 32, 0.12);
+
+  /* Status colors — kept recognizable, not part of the monochrome brand. */
+  --rose: #dc4c64;          /* alerts/danger */
+  --rose-tint: rgba(220, 76, 100, 0.12);
+  --rose-text: #ba1a1a;     /* danger as text (5.6:1 on its tint) — the storefront's error color */
+  --rose-border: rgba(220, 76, 100, 0.45);
+  --ok: #6b9c6c;            /* success */
+  --ok-strong: #3f6b40;     /* success text on a tinted background */
+  --ok-tint: rgba(107, 156, 108, 0.14);
+  --warn: #c9862a;          /* warning */
+  --warn-tint: rgba(201, 134, 42, 0.15);
+  --warn-text: #83571b;     /* warning as text: the same amber, darker (5.4:1 on its tint) */
 
   --font-body: 'Tajawal', sans-serif;
   --font-display: 'Markazi Text', serif;
@@ -75,7 +92,7 @@ textarea {
 .sidebar {
   width: 230px;
   flex: none;
-  background: var(--forest-deep);
+  background: var(--ink);
   color: var(--cream);
   padding: 24px 18px;
   display: flex;
@@ -101,7 +118,7 @@ textarea {
 
 .nav-label {
   font-size: 11px;
-  color: rgba(251, 249, 244, 0.4);
+  color: var(--on-dark-faint);
   font-weight: 700;
   margin: 14px 10px 6px;
 }
@@ -113,7 +130,7 @@ textarea {
   padding: 10px 12px;
   border-radius: 6px;
   font-size: 14px;
-  color: rgba(251, 249, 244, 0.75);
+  color: var(--on-dark-muted);
   text-decoration: none;
   font-weight: 500;
   border: none;
@@ -130,7 +147,7 @@ textarea {
 
 .nav-item.active,
 .nav-item:hover {
-  background: rgba(201, 162, 39, 0.16);
+  background: var(--on-dark-hover);
   color: var(--gold-soft);
 }
 
@@ -159,7 +176,7 @@ textarea {
 
 .topbar .sub {
   font-size: 13px;
-  color: #8a8074;
+  color: var(--ink-muted);
   margin-top: 2px;
   font-family: var(--font-body);
 }
@@ -181,7 +198,7 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--cream);
   font-weight: 700;
   font-size: 13px;
 }
@@ -217,7 +234,7 @@ textarea {
 
 .kpi-card .label {
   font-size: 12.5px;
-  color: #8a8074;
+  color: var(--ink-muted);
   font-weight: 600;
 }
 
@@ -265,7 +282,7 @@ table {
 th {
   text-align: right;
   font-size: 11.5px;
-  color: #8a8074;
+  color: var(--ink-muted);
   font-weight: 700;
   padding: 10px 22px;
   border-bottom: 1px solid var(--line);
@@ -290,18 +307,18 @@ tr:last-child td {
 }
 
 .status.ok {
-  background: rgba(91, 140, 90, 0.14);
-  color: var(--ok);
+  background: var(--ok-tint);
+  color: var(--ok-strong);
 }
 
 .status.low {
-  background: rgba(201, 134, 42, 0.15);
-  color: var(--warn);
+  background: var(--warn-tint);
+  color: var(--warn-text);
 }
 
 .status.out {
-  background: rgba(201, 123, 138, 0.18);
-  color: var(--rose);
+  background: var(--rose-tint);
+  color: var(--rose-text);
 }
 
 /* ---- Buttons ---- */
@@ -329,8 +346,8 @@ tr:last-child td {
 }
 
 .btn-danger {
-  background: rgba(201, 123, 138, 0.15);
-  color: var(--rose);
+  background: var(--rose-tint);
+  color: var(--rose-text);
 }
 
 .btn:disabled {
@@ -364,21 +381,21 @@ tr:last-child td {
   border-radius: 6px;
   padding: 9px 12px;
   font-size: 14px;
-  background: #fff;
+  background: var(--cream);
   color: var(--ink);
 }
 
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
-  outline: 2px solid var(--gold-soft);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 1px;
 }
 
 /* ---- Misc ---- */
 .error-banner {
-  background: rgba(201, 123, 138, 0.15);
-  color: var(--rose);
+  background: var(--rose-tint);
+  color: var(--rose-text);
   border-radius: 6px;
   padding: 10px 14px;
   font-size: 13.5px;
@@ -388,7 +405,7 @@ tr:last-child td {
 .empty-state {
   padding: 40px 22px;
   text-align: center;
-  color: #8a8074;
+  color: var(--ink-muted);
   font-size: 14px;
 }
 
@@ -405,7 +422,7 @@ tr:last-child td {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(21, 42, 33, 0.55);
+  background: var(--overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -469,7 +486,7 @@ tr:last-child td {
   background: var(--cream);
   border: 1px solid var(--line);
   border-inline-start: 4px solid var(--forest);
-  box-shadow: 0 6px 20px rgba(43, 35, 32, 0.12);
+  box-shadow: 0 6px 20px var(--shadow);
   font-size: 13.5px;
   color: var(--ink);
 }

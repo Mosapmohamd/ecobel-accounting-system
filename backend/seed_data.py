@@ -13,20 +13,16 @@ Creates:
     to show across every period filter (today/month/quarter/year).
 
 Idempotent guard: if any product already exists, the script does nothing
-(to avoid half-reseeding on top of real data). Delete the dev DB file first
-if you want a fresh run.
+(to avoid half-reseeding on top of real data). The schema must already
+exist — this script never creates tables (docs/DATABASE_SCHEMA_MANAGEMENT.md).
 """
 import random
 from datetime import datetime, timezone
 
 from dateutil.relativedelta import relativedelta
 
-from app.database import SessionLocal, engine
-from app.migrations import upgrade_to_head
+from app.database import SessionLocal
 from app import models
-
-# Bring the schema up to date even if the server hasn't been started yet.
-upgrade_to_head(engine)
 
 random.seed(42)  # deterministic output — same data every run on an empty DB
 

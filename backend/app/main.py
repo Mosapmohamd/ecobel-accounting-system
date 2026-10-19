@@ -6,8 +6,10 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from .database import engine
-from .migrations import upgrade_to_head
+from .security import DOCS_SETTINGS, SecurityHeadersMiddleware, check_production_config
+from .auth import SECRET_KEY
+from . import models  # noqa: F401  (registers every table on Base.metadata)
+from .database import check_schema_matches_models
 from .routers import (
     auth_router, categories, products, inventory, b2b, free_distribution,
     finance, reports, coupons, online_orders, web_analytics, offers, routines,
@@ -15,12 +17,13 @@ from .routers import (
 )
 from .routers.auth_router import limiter
 
-# This service owns the shared database's one migration history
-# (alembic/versions) — bring the schema to the latest revision on startup.
-upgrade_to_head(engine)
-
+# The database schema is managed in Supabase (docs/DATABASE_SCHEMA_MANAGEMENT.md).
+# Starting the app never creates, alters or migrates anything — it only warns
+# if the database lacks something these models use.
+check_schema_matches_models()
 
 app = FastAPI(
+    **DOCS_SETTINGS,  # no public API docs in production
     title="Eco Bel — Accounting & Inventory System",
     description="Backend API for inventory tracking, B2B wholesale sales, "
                 "free sample distribution, finance entries, reports, and "
@@ -38,6 +41,8 @@ app.add_middleware(SlowAPIMiddleware)
 FRONTEND_ORIGINS = os.getenv(
     "FRONTEND_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
 ).split(",")
+FRONTEND_ORIGINS = [o.strip() for o in FRONTEND_ORIGINS if o.strip()]
+check_production_config(SECRET_KEY, FRONTEND_ORIGINS)
 
 app.add_middleware(
     CORSMiddleware,
@@ -46,6 +51,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(SecurityHeadersMiddleware)
 
 
 app.include_router(auth_router.router)

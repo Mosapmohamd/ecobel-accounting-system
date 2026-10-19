@@ -1,8 +1,10 @@
-from datetime import datetime
+import re
+from datetime import date, datetime
 from enum import Enum as PyEnum
 from typing import Optional, List, Literal
-from pydantic import BaseModel, ConfigDict, Field, computed_field
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
+from . import cairo_time
 from .models import MovementType, RecipientType, FinanceEntryType, CouponDiscountType, OrderStatus
 
 
@@ -339,11 +341,29 @@ class SalesAnalytics(BaseModel):
 
 
 # ---------------- Online store: offers ----------------
+_DATE_ONLY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _offer_end(value):
+    """`expires_at` may be sent as a date ("2026-10-15": the offer's last
+    day) or as an explicit timestamp. A date means the offer runs through
+    that whole day in Cairo, so it's stored as the instant that day ends
+    (the start of the next Cairo day — see app/cairo_time.py). An explicit
+    timestamp is kept exactly as given."""
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return cairo_time.end_of_cairo_day(value)
+    if isinstance(value, str) and _DATE_ONLY.match(value.strip()):
+        return cairo_time.end_of_cairo_day(date.fromisoformat(value.strip()))
+    return value
+
+
 class OfferCreate(BaseModel):
     product_id: str
     title: str
     offer_price: float = Field(..., gt=0)
     expires_at: Optional[datetime] = None
+
+    _end_of_day = field_validator("expires_at", mode="before")(_offer_end)
 
 
 class OfferUpdate(BaseModel):
@@ -351,6 +371,8 @@ class OfferUpdate(BaseModel):
     offer_price: Optional[float] = Field(None, gt=0)
     is_active: Optional[bool] = None
     expires_at: Optional[datetime] = None
+
+    _end_of_day = field_validator("expires_at", mode="before")(_offer_end)
 
 
 class OfferOut(BaseModel):
@@ -365,6 +387,27 @@ class OfferOut(BaseModel):
     is_active: bool
     expires_at: Optional[datetime]
     created_at: datetime
+
+    @computed_field
+    @property
+    def is_running(self) -> bool:
+        """Switched on and not past its end — the same rule the storefront
+        uses to show and charge it (ecobel-website app/pricing.py)."""
+        return self.is_active and cairo_time.not_ended(self.expires_at)
+
+    @computed_field
+    @property
+    def ends_on(self) -> Optional[date]:
+        """The last Cairo calendar day the offer runs (None: no end date)."""
+        return cairo_time.last_cairo_day(cairo_time.as_utc(self.expires_at)) if self.expires_at else None
+
+    @computed_field
+    @property
+    def ends_at_day_end(self) -> bool:
+        """True when it ends with that whole day (set from a date); False
+        for an explicit time of day, e.g. offers saved before dates meant
+        "through the whole day"."""
+        return bool(self.expires_at) and cairo_time.is_end_of_cairo_day(cairo_time.as_utc(self.expires_at))
 
 
 # ---------------- Online store: routines ----------------

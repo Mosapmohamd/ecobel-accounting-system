@@ -1,20 +1,7 @@
-import { useEffect, useId, useRef } from 'react';
+import { useId, useRef } from 'react';
+import { useDialogFocus } from '../lib/useDialogFocus';
 
-/** In-app replacement for window.confirm. Focus starts on the safe
- * button, Escape/backdrop cancel (unless busy), and the backend's reason
- * for a failure is shown inside the dialog instead of closing it. */
-export default function ConfirmDialog({
-  open,
-  title,
-  message,
-  confirmLabel,
-  cancelLabel = 'رجوع',
-  danger = false,
-  busy = false,
-  error,
-  onConfirm,
-  onCancel,
-}: {
+type Props = {
   open: boolean;
   title: string;
   message?: string;
@@ -25,35 +12,26 @@ export default function ConfirmDialog({
   error?: string | null;
   onConfirm: () => void;
   onCancel: () => void;
-}) {
+};
+
+/** In-app replacement for window.confirm. Focus starts on the safe button
+ * and stays inside the dialog (Tab cycles), Escape/backdrop cancel (unless
+ * busy), and the backend's reason for a failure is shown inside the dialog
+ * instead of closing it. */
+export default function ConfirmDialog(props: Props) {
+  return props.open ? <ConfirmPanel {...props} /> : null;
+}
+
+function ConfirmPanel({ title, message, confirmLabel, cancelLabel = 'رجوع', danger = false, busy = false, error, onConfirm, onCancel }: Props) {
   const id = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
-  const onCancelRef = useRef(onCancel);
-  const busyRef = useRef(busy);
-  useEffect(() => {
-    onCancelRef.current = onCancel;
-    busyRef.current = busy;
-  });
-
-  useEffect(() => {
-    if (!open) return;
-    const returnFocus = document.activeElement as HTMLElement | null;
-    cancelRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !busyRef.current) onCancelRef.current();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      returnFocus?.focus();
-    };
-  }, [open]);
-
-  if (!open) return null;
+  useDialogFocus(panelRef, { onClose: onCancel, canClose: () => !busy, initialFocus: cancelRef });
 
   return (
     <div className="modal-overlay" onClick={() => !busy && onCancel()}>
       <div
+        ref={panelRef}
         className="modal"
         role="alertdialog"
         aria-modal="true"

@@ -88,10 +88,10 @@ export default function SalesAnalyticsPage() {
             <div className="panel-body" style={{ height: 260 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
-                  <XAxis dataKey="day" stroke="#8a8074" fontSize={11} />
-                  <YAxis stroke="#8a8074" fontSize={11} />
+                  <XAxis dataKey="day" stroke="var(--ink-muted)" fontSize={11} />
+                  <YAxis stroke="var(--ink-muted)" fontSize={11} />
                   <Tooltip formatter={(v) => money(Number(v))} />
-                  <Bar dataKey="total" fill="#b5566b" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="total" fill="var(--forest)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

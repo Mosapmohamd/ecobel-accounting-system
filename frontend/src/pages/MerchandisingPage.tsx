@@ -87,7 +87,7 @@ function SlotEditor({
       <div className="panel-head">
         <div>
           <h2>{title}</h2>
-          <div style={{ fontSize: 12.5, color: '#8a8074', marginTop: 2 }}>{description}</div>
+          <div style={{ fontSize: 12.5, color: 'var(--ink-muted)', marginTop: 2 }}>{description}</div>
         </div>
         <span className="pill" style={{ background: 'var(--parchment-2)', color: 'var(--forest)', fontWeight: 700 }}>
           {draft.length} / {max}
@@ -97,7 +97,7 @@ function SlotEditor({
       <div style={{ padding: '0 22px 22px' }}>
         {error && <div className="error-banner" style={{ marginBottom: 12 }}>{error}</div>}
         {notice && !dirty && (
-          <div role="status" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 8, background: 'rgba(107,156,108,0.12)', color: '#3f6b40', fontSize: 13 }}>
+          <div role="status" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 8, background: 'var(--ok-tint)', color: 'var(--ok-strong)', fontSize: 13 }}>
             {notice}
           </div>
         )}
@@ -107,7 +107,7 @@ function SlotEditor({
             const item = draft[i];
             if (!item) {
               return (
-                <li key={`empty-${i}`} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', border: '1px dashed var(--line)', borderRadius: 8, color: '#a39a90', fontSize: 13 }}>
+                <li key={`empty-${i}`} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', border: '1px dashed var(--line)', borderRadius: 8, color: 'var(--ink-muted)', fontSize: 13 }}>
                   <span style={{ width: 26, textAlign: 'center', fontWeight: 700 }}>{i + 1}</span>
                   خانة فاضية — مش هيظهر حاجة مكانها
                 </li>
@@ -118,7 +118,7 @@ function SlotEditor({
                 key={item.id}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 8,
-                  border: `1px solid ${item.issue ? 'rgba(220,76,100,0.45)' : 'var(--line)'}`, background: 'var(--cream)',
+                  border: `1px solid ${item.issue ? 'var(--rose-border)' : 'var(--line)'}`, background: 'var(--cream)',
                 }}
               >
                 <span style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--forest)', color: 'var(--cream)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, flex: 'none' }}>
@@ -126,9 +126,9 @@ function SlotEditor({
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700 }}>{item.label}</div>
-                  <div style={{ fontSize: 12.5, color: '#8a8074' }}>{item.meta}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--ink-muted)' }}>{item.meta}</div>
                   {item.issue && (
-                    <div style={{ fontSize: 12.5, color: 'var(--rose)', marginTop: 2 }}>
+                    <div style={{ fontSize: 12.5, color: 'var(--rose-text)', marginTop: 2 }}>
                       مخفي حاليًا من الموقع: {item.issue}
                     </div>
                   )}
@@ -139,7 +139,7 @@ function SlotEditor({
                   <button
                     type="button"
                     className="btn"
-                    style={{ padding: '5px 10px', background: 'rgba(201,123,138,0.15)', color: 'var(--rose)' }}
+                    style={{ padding: '5px 10px', background: 'var(--rose-tint)', color: 'var(--rose-text)' }}
                     onClick={() => { setDraft((prev) => prev.filter((d) => d.id !== item.id)); setNotice(null); }}
                   >
                     إزالة
@@ -167,7 +167,7 @@ function SlotEditor({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 18, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 12.5, color: dirty ? 'var(--rose)' : '#8a8074' }}>
+          <span style={{ fontSize: 12.5, color: dirty ? 'var(--rose-text)' : 'var(--ink-muted)' }}>
             {dirty ? 'في تعديلات مش محفوظة — الموقع لسه بيعرض الاختيار القديم.' : `الموقع بيعرض ${visibleCount} من ${max} حاليًا.`}
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
