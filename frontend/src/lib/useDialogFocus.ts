@@ -1,5 +1,9 @@
 import { useEffect, useRef, type RefObject } from 'react';
 
+// Open dialogs, innermost last: only the top one handles Escape and Tab, so
+// closing a confirmation never also closes the dialog it was opened from.
+const openDialogs: HTMLElement[] = [];
+
 const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /** Keyboard behaviour every dialog needs: focus moves into it on open
@@ -24,9 +28,11 @@ export function useDialogFocus(
     const panel = panelRef.current;
     if (!panel) return;
     const returnTo = document.activeElement as HTMLElement | null;
+    openDialogs.push(panel);
     (initialFocus?.current ?? panel.querySelector<HTMLElement>(FOCUSABLE) ?? panel).focus();
 
     const onKey = (e: KeyboardEvent) => {
+      if (openDialogs[openDialogs.length - 1] !== panel) return;
       if (e.key === 'Escape') {
         if (latest.current.canClose()) {
           e.preventDefault();
@@ -53,6 +59,7 @@ export function useDialogFocus(
     document.addEventListener('keydown', onKey);
     return () => {
       document.removeEventListener('keydown', onKey);
+      openDialogs.splice(openDialogs.indexOf(panel), 1);
       if (returnTo && document.contains(returnTo)) returnTo.focus();
     };
   }, [panelRef, initialFocus]);

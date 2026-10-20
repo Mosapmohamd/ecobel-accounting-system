@@ -231,6 +231,7 @@ def find_orphans(db, storage: SupabaseStorage) -> list[str]:
     from . import models
 
     referenced = {k for (k,) in db.query(models.Product.image_key).filter(models.Product.image_key.isnot(None))}
+    referenced |= {k for (k,) in db.query(models.ProductImage.image_key)}
     return sorted(k for k in storage.list_keys() if k not in referenced)
 
 

@@ -1,9 +1,10 @@
 import logging
-from typing import List, Optional
+from contextlib import contextmanager
+from typing import List, Literal, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from .. import models, schemas, auth, product_images
 from ..database import get_db
@@ -18,9 +19,16 @@ router = APIRouter(prefix="/products", tags=["Products"], dependencies=[Depends(
 def list_products(
     category_id: Optional[str] = None,
     low_stock_only: bool = False,
+    status: Literal["active", "archived", "all"] = "active",
     db: Session = Depends(get_db),
 ):
-    q = db.query(models.Product).filter(models.Product.is_active == True)  # noqa: E712
+    """Active products by default; `status=archived` lists archived ones
+    (so they can be restored), `status=all` both."""
+    q = db.query(models.Product).options(selectinload(models.Product.images))
+    if status == "active":
+        q = q.filter(models.Product.is_active == True)  # noqa: E712
+    elif status == "archived":
+        q = q.filter(models.Product.is_active == False)  # noqa: E712
     if category_id:
         q = q.filter(models.Product.category_id == category_id)
     products = q.order_by(models.Product.name).all()
@@ -98,13 +106,125 @@ def update_product(product_id: str, payload: schemas.ProductUpdate, db: Session 
 
 @router.delete("/{product_id}", status_code=204)
 def deactivate_product(product_id: str, db: Session = Depends(get_db)):
-    """Soft-delete: products are never hard-deleted since inventory movements
-    and past B2B order items reference them."""
+    """"Delete" = archive (soft delete): the product leaves the storefront
+    and the active list, but its row stays, because orders, B2B orders,
+    stock movements, free distributions, offers, routines and reviews refer
+    to it — their history must never change. Restore with PATCH
+    `is_active: true`. Photos are kept."""
     product = db.get(models.Product, product_id)
     if not product:
         raise HTTPException(404, "المنتج غير موجود")
     product.is_active = False
     db.commit()
+
+
+def _product_or_404(db: Session, product_id: str) -> models.Product:
+    product = db.get(models.Product, product_id)
+    if not product:
+        raise HTTPException(404, "المنتج غير موجود")
+    return product
+
+
+def _require_storage(storage):
+    if storage is None:
+        raise HTTPException(503, "تخزين صور المنتجات مش متجهز على السيرفر — كلّمي المسؤول التقني")
+    return storage
+
+
+async def _store(product: models.Product, file: UploadFile, storage) -> str:
+    """Validate the upload fully and store it under a new unique key."""
+    # Read at most one byte past the limit — never buffer an arbitrarily big upload.
+    data = await file.read(product_images.MAX_BYTES + 1)
+    try:
+        image = product_images.validate_image(data, file.content_type, file.filename)
+    except product_images.InvalidImage as e:
+        raise HTTPException(400, str(e))
+    key = product_images.new_key(product.id, image.extension)
+    try:
+        await run_in_threadpool(storage.upload, key, image.data, image.content_type)
+    except product_images.StorageError:
+        logger.exception("Product photo upload failed")
+        raise HTTPException(502, "تعذر حفظ الصورة دلوقتي — حاولي تاني بعد شوية")
+    return key
+
+
+def _delete_unreferenced(db: Session, storage, keys: list) -> None:
+    """Remove stored files only once no product or product photo row refers
+    to them any more (checked after the change was committed). Blocking —
+    async endpoints call it through run_in_threadpool."""
+    keys = [k for k in keys if k]
+    if not keys or storage is None:
+        return
+    used = {k for (k,) in db.query(models.Product.image_key).filter(models.Product.image_key.in_(keys))}
+    used |= {k for (k,) in db.query(models.ProductImage.image_key).filter(models.ProductImage.image_key.in_(keys))}
+    unused = [k for k in keys if k not in used]
+    if unused:
+        _delete_quietly(storage, unused)
+
+
+def _photo_or_404(product: models.Product, image_id: str) -> models.ProductImage:
+    photo = next((i for i in product.images if i.id == image_id), None)
+    if photo is None:
+        raise HTTPException(404, "الصورة غير موجودة")
+    return photo
+
+
+def _renumber(product: models.Product) -> None:
+    for position, photo in enumerate(sorted(product.images, key=lambda i: i.position)):
+        photo.position = position
+
+
+def _lock_product(db: Session, product_id: str) -> models.Product:
+    """The product re-read with a row lock (FOR UPDATE, held until commit)
+    and its photos fresh from the database: changes to one product's photos
+    happen one at a time, so the photo limit and "first photo becomes the
+    main one" hold under concurrent requests. Taken after any upload — never
+    while waiting on Storage."""
+    db.expire_all()
+    product = db.query(models.Product).filter(models.Product.id == product_id).with_for_update().one_or_none()
+    if not product:
+        raise HTTPException(404, "المنتج غير موجود")
+    return product
+
+
+@contextmanager
+def _locked_product(db: Session, product_id: str):
+    """The product under its row lock for one change; the block commits.
+    Any error inside rolls back right here, so the lock never outlives the
+    block (it must not wait for the request's teardown — see below).
+
+    A lock wait blocks its thread, so this only ever runs off the event loop
+    (sync endpoints, or run_in_threadpool from async ones): a request
+    waiting on the event loop would stall every request in this process,
+    including the one holding the lock — a deadlock."""
+    try:
+        yield _lock_product(db, product_id)
+    except BaseException:
+        db.rollback()
+        raise
+
+
+def _gallery_full(product: models.Product) -> bool:
+    return bool(product.image_key) and len(product.images) >= models.PRODUCT_IMAGES_MAX
+
+
+def _gallery_full_error() -> HTTPException:
+    return HTTPException(400, f"وصلتي للحد الأقصى: صورة رئيسية و{models.PRODUCT_IMAGES_MAX} صور إضافية")
+
+
+async def _apply_upload(storage, new_key: str, change):
+    """Run `change` (lock, edit, commit — blocking) off the event loop. If it
+    fails, the file just stored for it is removed again: no orphans.
+
+    Only ordinary errors (`Exception`) remove it. A cancellation may arrive
+    after `change` has committed a row that points at the file, so then the
+    file is kept: at worst an orphan (`python -m app.product_images orphans`),
+    never a photo whose file is gone. Rollback is `_locked_product`'s job."""
+    try:
+        return await run_in_threadpool(change)
+    except Exception:
+        await run_in_threadpool(_delete_quietly, storage, [new_key])
+        raise
 
 
 @router.post("/{product_id}/image", response_model=schemas.ProductOut)
@@ -114,59 +234,147 @@ async def upload_product_image(
     db: Session = Depends(get_db),
     storage=Depends(product_images.get_storage),
 ):
-    """Upload or replace a product's photo (staff only — the router requires
-    a staff token). The file is fully validated, stored under a new unique
-    key, and the old photo is removed once the product points at the new one."""
-    product = db.get(models.Product, product_id)
-    if not product:
-        raise HTTPException(404, "المنتج غير موجود")
-    if storage is None:
-        raise HTTPException(503, "تخزين صور المنتجات مش متجهز على السيرفر — كلّمي المسؤول التقني")
+    """Upload or replace a product's main photo (staff only — the router
+    requires a staff token). The file is fully validated, stored under a new
+    unique key, and the old photo is removed once nothing refers to it."""
+    product = _product_or_404(db, product_id)
+    _require_storage(storage)
+    key = await _store(product, file, storage)
 
-    # Read at most one byte past the limit — never buffer an arbitrarily big upload.
-    data = await file.read(product_images.MAX_BYTES + 1)
-    try:
-        image = product_images.validate_image(data, file.content_type, file.filename)
-    except product_images.InvalidImage as e:
-        raise HTTPException(400, str(e))
+    def point_at_new_photo():
+        with _locked_product(db, product_id) as product:
+            old_key, product.image_key = product.image_key, key
+            db.commit()
+            return old_key
 
-    key = product_images.new_key(product.id, image.extension)
-    try:
-        await run_in_threadpool(storage.upload, key, image.data, image.content_type)
-    except product_images.StorageError:
-        logger.exception("Product photo upload failed")
-        raise HTTPException(502, "تعذر حفظ الصورة دلوقتي — حاولي تاني بعد شوية")
-
-    old_key = product.image_key
-    product.image_key = key
-    try:
-        db.commit()
-    except Exception:
-        db.rollback()
-        await run_in_threadpool(_delete_quietly, storage, [key])  # don't leave the new file orphaned
-        raise
-    if old_key:
-        await run_in_threadpool(_delete_quietly, storage, [old_key])
-    db.refresh(product)
-    return product
+    old_key = await _apply_upload(storage, key, point_at_new_photo)
+    await run_in_threadpool(_delete_unreferenced, db, storage, [old_key])
+    return _product_or_404(db, product_id)
 
 
 @router.delete("/{product_id}/image", response_model=schemas.ProductOut)
-async def remove_product_image(product_id: str, db: Session = Depends(get_db), storage=Depends(product_images.get_storage)):
-    """Remove a product's photo (staff only); the storefront shows the
-    standard fallback instead."""
-    product = db.get(models.Product, product_id)
-    if not product:
-        raise HTTPException(404, "المنتج غير موجود")
-    old_key = product.image_key
-    if old_key and storage is None:
-        raise HTTPException(503, "تخزين صور المنتجات مش متجهز على السيرفر — كلّمي المسؤول التقني")
-    product.image_key = None
-    db.commit()
-    if old_key:
-        await run_in_threadpool(_delete_quietly, storage, [old_key])
-    db.refresh(product)
-    return product
+def remove_product_image(product_id: str, db: Session = Depends(get_db), storage=Depends(product_images.get_storage)):
+    """Remove a product's main photo (staff only). The first additional
+    photo, if any, becomes the main one; otherwise the storefront shows the
+    standard fallback."""
+    with _locked_product(db, product_id) as product:
+        old_key = product.image_key
+        if old_key:
+            _require_storage(storage)
+        promoted = product.images[0] if product.images else None
+        if old_key and promoted is not None:
+            product.image_key = promoted.image_key
+            product.images.remove(promoted)
+            _renumber(product)
+        else:
+            product.image_key = None
+        db.commit()
+    _delete_unreferenced(db, storage, [old_key])
+    return _product_or_404(db, product_id)
+
+
+@router.post("/{product_id}/images", response_model=schemas.ProductOut)
+async def add_product_photo(
+    product_id: str,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    storage=Depends(product_images.get_storage),
+):
+    """Add one photo (staff only). A product without a main photo gets it as
+    its main photo; otherwise it's appended to the additional photos. The
+    limit is checked before uploading (fast answer) and again under the
+    product's lock after uploading (concurrent requests can't exceed it)."""
+    product = _product_or_404(db, product_id)
+    _require_storage(storage)
+    if _gallery_full(product):
+        raise _gallery_full_error()
+    key = await _store(product, file, storage)
+
+    def attach():
+        with _locked_product(db, product_id) as product:
+            if _gallery_full(product):
+                raise _gallery_full_error()
+            if not product.image_key:
+                product.image_key = key
+            else:
+                position = max((i.position for i in product.images), default=-1) + 1
+                product.images.append(models.ProductImage(image_key=key, position=position))
+            db.commit()
+
+    await _apply_upload(storage, key, attach)
+    return _product_or_404(db, product_id)
+
+
+@router.put("/{product_id}/images/order", response_model=schemas.ProductOut)
+def reorder_product_photos(product_id: str, payload: schemas.ProductImagesOrder, db: Session = Depends(get_db)):
+    """Set the display order of the additional photos — the list must name
+    each of them exactly once."""
+    with _locked_product(db, product_id) as product:
+        by_id = {i.id: i for i in product.images}
+        if len(payload.image_ids) != len(by_id) or set(payload.image_ids) != set(by_id):
+            raise HTTPException(400, "ترتيب الصور مش مطابق لصور المنتج الحالية — حدّثي الصفحة وحاولي تاني")
+        for position, image_id in enumerate(payload.image_ids):
+            by_id[image_id].position = position
+        db.commit()
+    return _product_or_404(db, product_id)
+
+
+@router.put("/{product_id}/images/{image_id}", response_model=schemas.ProductOut)
+async def replace_product_photo(
+    product_id: str,
+    image_id: str,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    storage=Depends(product_images.get_storage),
+):
+    """Replace one additional photo's file, keeping its place in the order."""
+    product = _product_or_404(db, product_id)
+    _photo_or_404(product, image_id)
+    _require_storage(storage)
+    key = await _store(product, file, storage)
+
+    def swap_file():
+        with _locked_product(db, product_id) as product:
+            photo = _photo_or_404(product, image_id)  # it may have been removed meanwhile
+            old_key, photo.image_key = photo.image_key, key
+            db.commit()
+            return old_key
+
+    old_key = await _apply_upload(storage, key, swap_file)
+    await run_in_threadpool(_delete_unreferenced, db, storage, [old_key])
+    return _product_or_404(db, product_id)
+
+
+@router.delete("/{product_id}/images/{image_id}", response_model=schemas.ProductOut)
+def remove_product_photo(
+    product_id: str, image_id: str, db: Session = Depends(get_db), storage=Depends(product_images.get_storage)
+):
+    """Remove one additional photo; its file is deleted once unreferenced."""
+    with _locked_product(db, product_id) as product:
+        photo = _photo_or_404(product, image_id)
+        _require_storage(storage)
+        old_key = photo.image_key
+        product.images.remove(photo)
+        _renumber(product)
+        db.commit()
+    _delete_unreferenced(db, storage, [old_key])
+    return _product_or_404(db, product_id)
+
+
+@router.post("/{product_id}/images/{image_id}/primary", response_model=schemas.ProductOut)
+def make_photo_primary(product_id: str, image_id: str, db: Session = Depends(get_db)):
+    """Make an additional photo the main one; the previous main photo takes
+    its place among the additional photos. No file is copied or deleted."""
+    with _locked_product(db, product_id) as product:
+        photo = _photo_or_404(product, image_id)
+        if product.image_key:
+            product.image_key, photo.image_key = photo.image_key, product.image_key
+        else:
+            product.image_key = photo.image_key
+            product.images.remove(photo)
+            _renumber(product)
+        db.commit()
+    return _product_or_404(db, product_id)
 
 
 def _delete_quietly(storage, keys: list[str]) -> None:

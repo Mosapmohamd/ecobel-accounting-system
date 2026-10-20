@@ -2,7 +2,7 @@ import re
 from datetime import date, datetime
 from enum import Enum as PyEnum
 from typing import Optional, List, Literal
-from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
+from pydantic import AliasPath, BaseModel, ConfigDict, Field, computed_field, field_validator
 
 from . import cairo_time
 from .models import MovementType, RecipientType, FinanceEntryType, CouponDiscountType, OrderStatus
@@ -40,6 +40,30 @@ class UserOut(BaseModel):
 
 
 # ---------------- Products ----------------
+SHORT_DESCRIPTION_MAX = 400
+DESCRIPTION_MAX = 8000
+
+
+def _clean_name(v: Optional[str]) -> Optional[str]:
+    if v is None:
+        return v
+    v = v.strip()
+    if not v:
+        raise ValueError("اسم المنتج مطلوب")
+    if len(v) > 200:
+        raise ValueError("اسم المنتج طويل جدًا")
+    return v
+
+
+def _clean_text(v: Optional[str]) -> Optional[str]:
+    """Descriptions are plain text: trimmed, Windows line endings normalized,
+    and empty means "no description" (NULL), not an empty string."""
+    if v is None:
+        return None
+    v = "\n".join(line.rstrip() for line in v.splitlines()).strip()
+    return v or None
+
+
 class ProductCreate(BaseModel):
     name: str
     category_id: str
@@ -47,7 +71,11 @@ class ProductCreate(BaseModel):
     sale_price: float = Field(0, ge=0)
     quantity: int = Field(0, ge=0)
     low_stock_threshold: int = Field(10, ge=0)
-    description: Optional[str] = None
+    short_description: Optional[str] = Field(None, max_length=SHORT_DESCRIPTION_MAX)
+    description: Optional[str] = Field(None, max_length=DESCRIPTION_MAX)
+
+    _name = field_validator("name")(classmethod(lambda cls, v: _clean_name(v)))
+    _texts = field_validator("short_description", "description")(classmethod(lambda cls, v: _clean_text(v)))
 
 
 class ProductUpdate(BaseModel):
@@ -57,7 +85,34 @@ class ProductUpdate(BaseModel):
     sale_price: Optional[float] = Field(None, ge=0)
     low_stock_threshold: Optional[int] = Field(None, ge=0)
     is_active: Optional[bool] = None
-    description: Optional[str] = None
+    short_description: Optional[str] = Field(None, max_length=SHORT_DESCRIPTION_MAX)
+    description: Optional[str] = Field(None, max_length=DESCRIPTION_MAX)
+
+    _name = field_validator("name")(classmethod(lambda cls, v: _clean_name(v)))
+    _texts = field_validator("short_description", "description")(classmethod(lambda cls, v: _clean_text(v)))
+
+    # Leaving a field out keeps its value; sending null for one of these is
+    # an error (422) — they can't be empty, and is_active null would store a
+    # product every later read fails on. sku and the descriptions may be null.
+    @field_validator("name", "category_id", "sale_price", "low_stock_threshold", "is_active", mode="before")
+    @classmethod
+    def _not_null(cls, v):
+        if v is None:
+            raise ValueError("الحقل ده مطلوب ومينفعش يبقى فاضي")
+        return v
+
+
+class ProductPhotoOut(BaseModel):
+    """An additional product photo (the main one is `ProductOut.image_url`)."""
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    image_url: Optional[str] = None
+    position: int
+
+
+class ProductImagesOrder(BaseModel):
+    """Every additional photo id of the product, in the new display order."""
+    image_ids: List[str] = Field(..., max_length=50)
 
 
 class ProductOut(BaseModel):
@@ -73,6 +128,8 @@ class ProductOut(BaseModel):
     is_active: bool
     stock_status: str
     image_url: Optional[str] = None
+    images: List[ProductPhotoOut] = []
+    short_description: Optional[str] = None
     description: Optional[str] = None
     created_at: datetime
 
@@ -104,10 +161,32 @@ class B2BCustomerCreate(BaseModel):
 
 
 class B2BCustomerUpdate(BaseModel):
-    name: Optional[str] = None
-    phone: Optional[str] = None
+    name: Optional[str] = Field(None, max_length=200)
+    phone: Optional[str] = Field(None, max_length=40)
     discount_percentage: Optional[float] = Field(None, ge=0, le=100)
-    notes: Optional[str] = None
+    notes: Optional[str] = Field(None, max_length=2000)
+
+    # Leaving a field out keeps it; name and discount can't be emptied
+    # (phone and notes can be cleared with null).
+    @field_validator("name", "discount_percentage", mode="before")
+    @classmethod
+    def _not_null(cls, v):
+        if v is None:
+            raise ValueError("الحقل ده مطلوب ومينفعش يبقى فاضي")
+        return v
+
+    @field_validator("name")
+    @classmethod
+    def _name(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("اسم العميل مطلوب")
+        return v
+
+    @field_validator("phone", "notes")
+    @classmethod
+    def _blank_is_none(cls, v: Optional[str]) -> Optional[str]:
+        return (v.strip() or None) if v is not None else None
 
 
 class B2BCustomerOut(BaseModel):
@@ -132,9 +211,18 @@ class B2BOrderCreate(BaseModel):
     extra_discount_percentage: float = Field(0, ge=0, le=100, description="One-time extra discount for this order only — entered manually, on top of the customer's standing discount")
 
 
+class B2BOrderUpdate(BaseModel):
+    """The editable part of an order: its products and quantities, note and
+    one-time extra discount (the customer can't change)."""
+    items: List[B2BOrderItemIn] = Field(..., min_length=1, max_length=100)
+    note: Optional[str] = Field(None, max_length=2000)
+    extra_discount_percentage: float = Field(0, ge=0, le=100)
+
+
 class B2BOrderItemOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     product_id: str
+    product_name: Optional[str] = Field(None, validation_alias=AliasPath("product", "name"))
     quantity: int
     unit_price: float
     discount_percentage: float
@@ -145,6 +233,8 @@ class B2BOrderOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: str
     customer_id: str
+    # The customer's name, so a list of orders needs no customer lookup.
+    customer_name: Optional[str] = Field(None, validation_alias=AliasPath("customer", "name"))
     total_amount: float
     extra_discount_percentage: float
     note: Optional[str]
