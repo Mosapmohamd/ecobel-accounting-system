@@ -62,11 +62,20 @@ class Product(Base):
     # Storage key of the product photo ("products/<id>/<random>.<ext>") —
     # see app/product_images.py; `image_url` is the public URL built from it.
     image_key = Column(String, nullable=True)
-    description = Column(Text, nullable=True)  # shown on the website's product page
+    # One to three sentences next to the price on the product page.
+    short_description = Column(Text, nullable=True)
+    # The full description below the product's main details (plain text:
+    # paragraphs, "## " headings and "- " bullet lines — never HTML).
+    description = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=now)
     updated_at = Column(DateTime(timezone=True), default=now, onupdate=now)
 
     category = relationship("Category", back_populates="products")
+    # Additional photos, in display order; `image_key` stays the main photo.
+    images = relationship(
+        "ProductImage", back_populates="product", order_by="ProductImage.position",
+        cascade="all, delete-orphan",
+    )
     movements = relationship("InventoryMovement", back_populates="product")
 
     @property
@@ -80,6 +89,29 @@ class Product(Base):
     @property
     def category_name(self) -> str:
         return self.category.name if self.category else ""
+
+    @property
+    def image_url(self) -> str | None:
+        return public_url(self.image_key)
+
+
+# Most additional photos one product may have (besides its main photo).
+PRODUCT_IMAGES_MAX = 8
+
+
+class ProductImage(Base):
+    """An additional product photo (the main one is `Product.image_key`).
+    Keys follow the same scheme as the main photo and are unique per upload."""
+    __tablename__ = "product_images"
+    __table_args__ = (Index("ix_product_images_product_position", "product_id", "position"),)
+
+    id = Column(String, primary_key=True, default=gen_id)
+    product_id = Column(String, ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
+    image_key = Column(String, unique=True, nullable=False)
+    position = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime(timezone=True), default=now)
+
+    product = relationship("Product", back_populates="images")
 
     @property
     def image_url(self) -> str | None:

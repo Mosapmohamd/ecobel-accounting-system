@@ -8,10 +8,13 @@ export default function Modal({
   title,
   onClose,
   children,
+  wide = false,
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  /** For forms with more content (e.g. a product with its photos). */
+  wide?: boolean;
 }) {
   const id = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -21,7 +24,7 @@ export default function Modal({
     <div className="modal-overlay" onClick={onClose}>
       <div
         ref={panelRef}
-        className="modal"
+        className={wide ? 'modal modal-wide' : 'modal'}
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${id}-title`}

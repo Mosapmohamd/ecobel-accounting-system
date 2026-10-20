@@ -166,15 +166,24 @@ GET    /sales-analytics/?source=all|online|b2b
        separate tables (orders vs b2b_orders) and stay that way; this
        endpoint only combines them in the response.
 
-POST   /products/{id}/image            upload a product photo (jpg/png/webp,
-                                        <=5MB), served from /static
+GET    /products/?status=active|archived|all
+PATCH  /products/{id}                  edit name, category, price, short_description,
+                                        description (plain text), is_active (restore)
+DELETE /products/{id}                  archive (soft delete) — never a hard delete:
+                                        orders, stock movements, B2B, offers,
+                                        routines and reviews keep referring to it
+POST   /products/{id}/image            upload/replace the main photo (jpg/png/webp, <=5MB)
+DELETE /products/{id}/image            remove it (the first additional photo takes its place)
+POST   /products/{id}/images           add a photo (main if there's none, else additional; max 8)
+PUT    /products/{id}/images/order     {"image_ids": [...]} — order of the additional photos
+PUT    /products/{id}/images/{img}     replace one additional photo's file
+DELETE /products/{id}/images/{img}     remove one additional photo
+POST   /products/{id}/images/{img}/primary   swap it with the main photo
+                                        (photos live in Supabase Storage — app/product_images.py;
+                                        a file is deleted only once no row refers to it)
 ```
 
 ## Not yet wired up (future work)
 
-- Product images are stored locally under `static/` — moving them to
-  Supabase Storage is planned so they aren't tied to wherever this
-  service happens to be deployed (and so image traffic doesn't compete
-  with this service's own workload).
 - Multi-warehouse support — intentionally out of scope; current schema
   assumes a single stock pool per the client's current operations.

@@ -508,3 +508,222 @@ tr:last-child td {
   opacity: 0.6;
   cursor: pointer;
 }
+
+/* ---- Products (pages/ProductsPage.tsx, components/ProductImageManager.tsx) ---- */
+.btn-sm {
+  padding: 5px 10px;
+  font-size: 12.5px;
+}
+
+.modal.modal-wide {
+  max-width: 760px;
+}
+
+.field-hint {
+  font-size: 12px;
+  color: var(--ink-muted);
+  line-height: 1.6;
+}
+
+.status-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 8px;
+  background: var(--parchment-2);
+}
+
+.status-tabs button {
+  border: none;
+  background: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+
+.status-tabs button[aria-pressed='true'] {
+  background: var(--cream);
+  color: var(--forest);
+  box-shadow: 0 1px 3px var(--shadow);
+}
+
+.row-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.photo-count {
+  position: absolute;
+  bottom: -4px;
+  left: -6px;
+  min-width: 20px;
+  padding: 1px 5px;
+  border-radius: 10px;
+  background: var(--forest);
+  color: var(--cream);
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.photo-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.photo-tile {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--cream);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.photo-tile.is-main {
+  border-color: var(--forest);
+  box-shadow: 0 0 0 1px var(--forest);
+}
+
+.photo-tile-label {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.photo-tile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.photo-empty {
+  padding: 22px;
+  text-align: center;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--ink-muted);
+  font-size: 13.5px;
+}
+
+/* Phones: each product row becomes a card (labels from data-label). */
+@media (max-width: 700px) {
+  .products-table thead {
+    display: none;
+  }
+  .products-table tr {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .products-table td {
+    padding: 0;
+    border: none;
+  }
+  .products-table td:first-child {
+    grid-row: span 6;
+  }
+  .products-table td[data-label]::before {
+    content: attr(data-label) ': ';
+    color: var(--ink-muted);
+    font-size: 12px;
+  }
+  .products-table td.row-actions {
+    grid-column: 1 / -1;
+    margin-top: 8px;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* "عرض الكل" / "عرض أقل" under a panel's list (pages/B2BPage.tsx). */
+.panel-foot {
+  padding: 12px 22px;
+  border-top: 1px solid var(--line);
+  text-align: center;
+}
+
+/* B2B customer / order details (pages/B2BPage.tsx) — lists, not tables, so
+   dialogs never scroll sideways on phones. */
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px 18px;
+  margin: 0 0 18px;
+}
+
+.detail-grid dt {
+  font-size: 12px;
+  color: var(--ink-muted);
+  margin-bottom: 3px;
+}
+
+.detail-grid dd {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.detail-heading {
+  font-size: 15px;
+  color: var(--forest-deep);
+  margin: 0 0 8px;
+}
+
+.record-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.record-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13.5px;
+  overflow-wrap: anywhere;
+}
+
+.record-list li:last-child {
+  border-bottom: none;
+}
+
+.record-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* A table wider than its panel (phones) scrolls inside the panel instead of
+   being clipped; positioned, so visually hidden header labels stay inside. */
+.table-scroll {
+  position: relative;
+  overflow-x: auto;
+}

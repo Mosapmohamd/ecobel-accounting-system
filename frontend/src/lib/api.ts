@@ -52,9 +52,22 @@ export interface Product {
   low_stock_threshold: number;
   is_active: boolean;
   stock_status: StockStatus;
+  /** Main photo. */
   image_url: string | null;
+  /** Additional photos, in display order. */
+  images: ProductPhoto[];
+  short_description: string | null;
+  description: string | null;
   created_at: string;
 }
+
+export interface ProductPhoto {
+  id: string;
+  image_url: string | null;
+  position: number;
+}
+
+export type ProductListStatus = 'active' | 'archived' | 'all';
 
 export interface B2BCustomer {
   id: string;
@@ -67,6 +80,7 @@ export interface B2BCustomer {
 
 export interface B2BOrderItem {
   product_id: string;
+  product_name: string | null;
   quantity: number;
   unit_price: number;
   discount_percentage: number;
@@ -76,6 +90,7 @@ export interface B2BOrderItem {
 export interface B2BOrder {
   id: string;
   customer_id: string;
+  customer_name: string | null;
   total_amount: number;
   extra_discount_percentage: number;
   note: string | null;
@@ -156,22 +171,37 @@ export const categoriesApi = {
 
 // ---------------- Products ----------------
 export const productsApi = {
-  list: (params?: { category_id?: string; low_stock_only?: boolean }) =>
+  list: (params?: { category_id?: string; low_stock_only?: boolean; status?: ProductListStatus }) =>
     api.get<Product[]>('/products/', { params }).then((r) => r.data),
   create: (payload: Partial<Product> & { category_id: string }) =>
     api.post<Product>('/products/', payload).then((r) => r.data),
   update: (id: string, payload: Partial<Product>) =>
     api.patch<Product>(`/products/${id}`, payload).then((r) => r.data),
+  /** Archives the product (soft delete) — see the backend's DELETE /products/{id}. */
   deactivate: (id: string) => api.delete(`/products/${id}`),
-  uploadImage: (id: string, file: File) => {
-    const form = new FormData();
-    form.append('file', file);
-    return api.post<Product>(`/products/${id}/image`, form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }).then((r) => r.data);
-  },
+  restore: (id: string) => api.patch<Product>(`/products/${id}`, { is_active: true }).then((r) => r.data),
+  uploadImage: (id: string, file: File) =>
+    api.post<Product>(`/products/${id}/image`, fileForm(file), multipart).then((r) => r.data),
   removeImage: (id: string) => api.delete<Product>(`/products/${id}/image`).then((r) => r.data),
+  addPhoto: (id: string, file: File) =>
+    api.post<Product>(`/products/${id}/images`, fileForm(file), multipart).then((r) => r.data),
+  replacePhoto: (id: string, imageId: string, file: File) =>
+    api.put<Product>(`/products/${id}/images/${imageId}`, fileForm(file), multipart).then((r) => r.data),
+  removePhoto: (id: string, imageId: string) =>
+    api.delete<Product>(`/products/${id}/images/${imageId}`).then((r) => r.data),
+  makePrimary: (id: string, imageId: string) =>
+    api.post<Product>(`/products/${id}/images/${imageId}/primary`).then((r) => r.data),
+  reorderPhotos: (id: string, imageIds: string[]) =>
+    api.put<Product>(`/products/${id}/images/order`, { image_ids: imageIds }).then((r) => r.data),
 };
+
+const multipart = { headers: { 'Content-Type': 'multipart/form-data' } };
+
+function fileForm(file: File): FormData {
+  const form = new FormData();
+  form.append('file', file);
+  return form;
+}
 
 // ---------------- Inventory ----------------
 export const inventoryApi = {
@@ -183,15 +213,27 @@ export const inventoryApi = {
 
 // ---------------- B2B ----------------
 export const b2bApi = {
-  listCustomers: () => api.get<B2BCustomer[]>('/b2b/customers').then((r) => r.data),
+  /** By name unless `order: 'newest'`; `limit` caps the list. */
+  listCustomers: (params?: { order?: 'name' | 'newest'; limit?: number }) =>
+    api.get<B2BCustomer[]>('/b2b/customers', { params }).then((r) => r.data),
   createCustomer: (payload: Partial<B2BCustomer>) =>
     api.post<B2BCustomer>('/b2b/customers', payload).then((r) => r.data),
   updateCustomer: (id: string, payload: Partial<B2BCustomer>) =>
     api.patch<B2BCustomer>(`/b2b/customers/${id}`, payload).then((r) => r.data),
-  listOrders: (customer_id?: string) =>
-    api.get<B2BOrder[]>('/b2b/orders', { params: { customer_id } }).then((r) => r.data),
+  /** Newest first; `limit` caps the list. */
+  listOrders: (params?: { customer_id?: string; limit?: number }) =>
+    api.get<B2BOrder[]>('/b2b/orders', { params }).then((r) => r.data),
   createOrder: (payload: { customer_id: string; items: { product_id: string; quantity: number }[]; note?: string; extra_discount_percentage?: number }) =>
     api.post<B2BOrder>('/b2b/orders', payload).then((r) => r.data),
+  getCustomer: (id: string) => api.get<B2BCustomer>(`/b2b/customers/${id}`).then((r) => r.data),
+  /** Refused (409) while the customer has orders. */
+  deleteCustomer: (id: string) => api.delete(`/b2b/customers/${id}`),
+  getOrder: (id: string) => api.get<B2BOrder>(`/b2b/orders/${id}`).then((r) => r.data),
+  /** Products, quantities, note and extra discount; stock and finance are reconciled server-side. */
+  updateOrder: (id: string, payload: { items: { product_id: string; quantity: number }[]; note?: string | null; extra_discount_percentage: number }) =>
+    api.put<B2BOrder>(`/b2b/orders/${id}`, payload).then((r) => r.data),
+  /** Returns the stock and reverses the revenue, then removes the order. */
+  deleteOrder: (id: string) => api.delete(`/b2b/orders/${id}`),
 };
 
 // ---------------- Free distribution ----------------
