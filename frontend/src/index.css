@@ -727,3 +727,27 @@ tr:last-child td {
   position: relative;
   overflow-x: auto;
 }
+
+/* Announcement bar preview (components/AnnouncementBarEditor.tsx) — the
+   storefront's bar in miniature: same height, motion and themes. */
+.ab-preview {
+  position: relative;
+  height: 28px;
+  overflow: hidden;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+.ab-preview-viewport { flex: 1; min-width: 0; height: 100%; overflow: hidden; }
+.ab-preview-track { display: flex; width: max-content; height: 100%; animation: ab-left 32s linear infinite; }
+.ab-preview-track[data-motion="right"] { animation-name: ab-right; }
+.ab-preview-half { display: flex; flex: none; min-width: 100%; justify-content: space-around; }
+.ab-preview-item { display: inline-flex; align-items: center; padding-inline: 2rem; white-space: nowrap; }
+.ab-preview-static { flex: 1; min-width: 0; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-inline: 12px; }
+@keyframes ab-left { to { transform: translateX(-50%); } }
+@keyframes ab-right { to { transform: translateX(50%); } }
+@media (prefers-reduced-motion: reduce) {
+  .ab-preview-track { animation: none; }
+}

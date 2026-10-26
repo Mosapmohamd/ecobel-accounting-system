@@ -4,6 +4,7 @@ import {
   FEATURED_PRODUCTS_MAX, FEATURED_ROUTINES_MAX,
   type Product, type Routine,
 } from '../lib/api';
+import AnnouncementBarEditor from '../components/AnnouncementBarEditor';
 
 /** One row in a homepage section: what staff picked, and whether the
  * storefront can currently show it. */
@@ -230,11 +231,16 @@ export default function MerchandisingPage() {
     [routines, products],
   );
 
-  if (error) return <div className="error-banner">{error}</div>;
-  if (!savedProducts || !savedRoutines) return <div className="empty-state">جاري التحميل...</div>;
-
   return (
     <div>
+      {/* Loads on its own: a problem with the homepage picks doesn't hide it. */}
+      <AnnouncementBarEditor />
+      {error ? (
+        <div className="error-banner">{error}</div>
+      ) : !savedProducts || !savedRoutines ? (
+        <div className="empty-state">جاري التحميل...</div>
+      ) : (
+      <>
       <SlotEditor
         title="منتجات مختارة لكِ"
         description={`المنتجات اللي هتظهر في قسم «منتجات مختارة لكِ» بالصفحة الرئيسية، بالترتيب ده (أقصى عدد ${FEATURED_PRODUCTS_MAX}). مش بتأثر على صفحة كل المنتجات.`}
@@ -259,6 +265,8 @@ export default function MerchandisingPage() {
           setSavedRoutines(res.map((s) => routineSlot(s.routine, s.issue)));
         }}
       />
+      </>
+      )}
     </div>
   );
 }

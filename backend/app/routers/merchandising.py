@@ -119,3 +119,37 @@ def set_featured_routines(payload: schemas.FeaturedRoutinesUpdate, db: Session =
         db.add(models.FeaturedRoutine(position=position, routine_id=rid))
     db.commit()
     return get_featured_routines(db)
+
+
+# ---------------- the announcement bar (storefront_settings) ----------------
+ANNOUNCEMENT_KEY = "announcement_bar"
+
+
+def announcement_settings(db: Session) -> schemas.AnnouncementBar:
+    """Saved settings — or the defaults (today's bar) when none were saved."""
+    row = db.get(models.StorefrontSetting, ANNOUNCEMENT_KEY)
+    return schemas.AnnouncementBar.model_validate(row.value) if row and row.value else schemas.AnnouncementBar()
+
+
+@router.get("/announcement-bar", response_model=schemas.AnnouncementBar)
+def get_announcement_bar(db: Session = Depends(get_db)):
+    return announcement_settings(db)
+
+
+@router.put("/announcement-bar", response_model=schemas.AnnouncementBar)
+def set_announcement_bar(
+    payload: schemas.AnnouncementBar,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(auth.get_current_user),
+):
+    """Saves the bar; the storefront shows it within a minute, no rebuild."""
+    if payload.enabled and not payload.has_text:
+        raise HTTPException(400, "اكتبي نص الإعلان قبل ما تفعّلي الشريط")
+    row = db.get(models.StorefrontSetting, ANNOUNCEMENT_KEY)
+    if row is None:
+        row = models.StorefrontSetting(key=ANNOUNCEMENT_KEY)
+        db.add(row)
+    row.value = payload.model_dump()
+    row.updated_by = user.username
+    db.commit()
+    return announcement_settings(db)

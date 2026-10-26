@@ -1,5 +1,5 @@
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from enum import Enum as PyEnum
 from typing import Optional, List, Literal
 from pydantic import AliasPath, BaseModel, ConfigDict, Field, computed_field, field_validator
@@ -380,6 +380,17 @@ ORDER_TRANSITIONS: dict[OrderStatus, List[OrderStatus]] = {
 }
 
 
+class OrderPromotionOut(BaseModel):
+    """What an online order got from one cart offer (snapshot at checkout)."""
+    model_config = ConfigDict(from_attributes=True)
+    promotion_id: str
+    name: str
+    type: str
+    discount: float
+    shipping_discount: float
+    details: dict = {}
+
+
 class OnlineOrderOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: str
@@ -391,12 +402,14 @@ class OnlineOrderOut(BaseModel):
     status: OrderStatus
     payment_method: str
     subtotal: float
-    discount_amount: float
+    discount_amount: float  # coupon
+    promotion_discount: float = 0  # cart offers (shipping waivers are in applied_promotions)
     shipping_fee: float
     total_amount: float
     note: Optional[str]
     created_at: datetime
     items: List[OnlineOrderItemOut]
+    applied_promotions: List[OrderPromotionOut] = []
 
     @computed_field
     @property
@@ -452,6 +465,8 @@ class OfferCreate(BaseModel):
     title: str
     offer_price: float = Field(..., gt=0)
     expires_at: Optional[datetime] = None
+    # False = saved switched off (e.g. a copy) — doesn't change any price yet.
+    is_active: bool = True
 
     _end_of_day = field_validator("expires_at", mode="before")(_offer_end)
 
@@ -589,3 +604,187 @@ class FeaturedRoutineSlot(BaseModel):
     routine: RoutineOut
     is_visible: bool
     issue: Optional[str] = None
+
+
+# ---------------- Promotions (the Offer Builder — app/promotions.py) ----------------
+def _promotion_start(value):
+    """`starts_at` as a date ("2026-11-01") means from the start of that day
+    in Cairo; an explicit timestamp is kept as given."""
+    if isinstance(value, str) and _DATE_ONLY.match(value.strip()):
+        value = date.fromisoformat(value.strip())
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return cairo_time.end_of_cairo_day(value - timedelta(days=1))
+    return value
+
+
+PromotionType = Literal["bundle", "free_shipping", "percentage", "fixed_amount", "buy_x_get_y"]
+PromotionStatus = Literal["draft", "active", "inactive"]
+
+
+class PromotionIn(BaseModel):
+    """A whole offer as the builder sends it (create and edit alike). The
+    type-specific `config` is checked by app/routers/promotions.py."""
+    name: str = Field(..., max_length=120)
+    description: Optional[str] = Field(None, max_length=1000)
+    badge_text: Optional[str] = Field(None, max_length=40)
+    type: PromotionType
+    status: PromotionStatus = "draft"
+    starts_at: Optional[datetime] = None
+    ends_at: Optional[datetime] = None
+    priority: int = Field(0, ge=-1000, le=1000)
+    combinable: bool = False
+    min_subtotal: Optional[float] = Field(None, ge=0, le=10_000_000)
+    usage_limit: Optional[int] = Field(None, ge=1, le=10_000_000)
+    per_customer_limit: Optional[int] = Field(None, ge=1, le=10_000)
+    config: dict = {}
+    eligible_product_ids: List[str] = Field([], max_length=500)
+    eligible_category_ids: List[str] = Field([], max_length=200)
+    reward_product_ids: List[str] = Field([], max_length=500)
+    reward_category_ids: List[str] = Field([], max_length=200)
+    # FIXED bundles: units per bundle of each eligible product (missing = 1).
+    product_quantities: dict[str, int] = Field({}, max_length=500)
+
+    _start = field_validator("starts_at", mode="before")(_promotion_start)
+    _end = field_validator("ends_at", mode="before")(_offer_end)
+
+
+class PromotionTargetOut(BaseModel):
+    id: str
+    name: str
+    quantity: int = 1  # units per bundle (fixed bundles)
+
+
+class PromotionOut(BaseModel):
+    """One row of the unified Offers page. `source` "product_offer" is a
+    per-product sale price (table `offers`, managed through /offers): type
+    "product_price", config {product_id, offer_price, original_price}."""
+    source: Literal["promotion", "product_offer"] = "promotion"
+    id: str
+    name: str
+    description: Optional[str] = None
+    badge_text: Optional[str] = None
+    type: str
+    status: str
+    # draft / scheduled / active / expired / inactive — status plus the dates.
+    state: str
+    summary: str
+    starts_at: Optional[datetime] = None
+    ends_at: Optional[datetime] = None
+    priority: int
+    combinable: bool
+    min_subtotal: Optional[float] = None
+    usage_limit: Optional[int] = None
+    per_customer_limit: Optional[int] = None
+    used_count: int
+    # Orders (not cancelled) that received this offer.
+    orders_count: int = 0
+    # Used by an order: its terms can't change any more (duplicate instead).
+    terms_locked: bool = False
+    config: dict
+    eligible_products: List[PromotionTargetOut] = []
+    eligible_categories: List[PromotionTargetOut] = []
+    reward_products: List[PromotionTargetOut] = []
+    reward_categories: List[PromotionTargetOut] = []
+    created_by: Optional[str] = None
+    updated_by: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+class PromotionPage(BaseModel):
+    items: List[PromotionOut]
+    total: int
+    limit: int
+    offset: int
+    # Offers per state for the current search/type (before the state filter):
+    # total, draft, scheduled, active, expired, inactive.
+    counts: dict[str, int] = {}
+
+
+class PromotionPreviewItem(BaseModel):
+    product_id: str
+    quantity: int = Field(..., ge=1, le=100)
+
+
+class PromotionPreviewIn(BaseModel):
+    promotion: PromotionIn
+    items: List[PromotionPreviewItem] = Field(..., min_length=1, max_length=30)
+    city: Optional[str] = Field(None, max_length=100)
+
+
+class PromotionPreviewLine(BaseModel):
+    product_id: str
+    product_name: str
+    quantity: int
+    unit_price: float
+    line_total: float
+    discount: float = 0
+    free_units: int = 0
+
+
+class PromotionPreviewOut(BaseModel):
+    lines: List[PromotionPreviewLine]
+    subtotal: float
+    applied: bool
+    reason: Optional[str] = None
+    discount: float = 0
+    shipping_fee: Optional[float] = None
+    shipping_discount: float = 0
+    total: float
+    summary: str
+    detail: dict = {}
+
+
+# ---------------- Storefront settings: the announcement bar ----------------
+# KEEP IDENTICAL in ecobel-accounting-system and ecobel-website (schemas.py):
+# the accounting system validates what it saves, the storefront validates
+# again what it serves. Structured fields only — the text is plain text (no
+# markup), colours are named themes, the link is a site path or https URL.
+_ANNOUNCEMENT_TEXT_MAX = 200
+_CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f]")
+
+
+def _plain_text(v):
+    if v is None:
+        return None
+    v = _CONTROL_CHARS.sub(" ", str(v)).strip()
+    if "<" in v or ">" in v:
+        raise ValueError("النص لازم يكون كلام عادي من غير رموز < أو >")
+    return v or None
+
+
+def _safe_link(v):
+    if v is None or not str(v).strip():
+        return None
+    v = str(v).strip()
+    if len(v) > 300 or any(c.isspace() or c in "<>\"'`\\" for c in v):
+        raise ValueError("الرابط غير صحيح")
+    if v.startswith("/") and not v.startswith("//"):
+        return v  # a page of the site, e.g. /products?offers=1
+    m = re.match(r"^https://([A-Za-z0-9.-]+\.[A-Za-z]{2,})(:\d+)?(/[^\s]*)?$", v)
+    if not m:
+        raise ValueError("الرابط لازم يبدأ بـ / (صفحة في الموقع) أو https://")
+    return v
+
+
+class AnnouncementBar(BaseModel):
+    """The scrolling bar at the top of every storefront page."""
+    model_config = ConfigDict(extra="forbid")
+    enabled: bool = True
+    text_ar: Optional[str] = Field("أهلاً بكم في EcoBel", max_length=_ANNOUNCEMENT_TEXT_MAX)
+    text_en: Optional[str] = Field(None, max_length=_ANNOUNCEMENT_TEXT_MAX)
+    scrolling: bool = True
+    # "auto": Arabic moves toward the left edge's opposite (enters where Arabic
+    # reading starts) and English the other way; "right"/"left" force it.
+    direction: Literal["auto", "right", "left"] = "auto"
+    speed: Literal["slow", "normal", "fast"] = "normal"
+    visibility: Literal["all", "desktop", "mobile"] = "all"
+    theme: Literal["default", "brand", "light", "accent"] = "default"
+    link_url: Optional[str] = None
+
+    _texts = field_validator("text_ar", "text_en", mode="before")(_plain_text)
+    _link = field_validator("link_url", mode="before")(_safe_link)
+
+    @property
+    def has_text(self) -> bool:
+        return bool((self.text_ar or "").strip() or (self.text_en or "").strip())

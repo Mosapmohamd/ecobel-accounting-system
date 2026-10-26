@@ -370,12 +370,16 @@ export interface OnlineOrder {
   status: OnlineOrderStatus;
   payment_method: string;
   subtotal: number;
+  /** Coupon discount. */
   discount_amount: number;
+  /** Cart offers' product discount (shipping waivers are in applied_promotions). */
+  promotion_discount: number;
   shipping_fee: number;
   total_amount: number;
   note: string | null;
   created_at: string;
   items: OnlineOrderItem[];
+  applied_promotions: { promotion_id: string; name: string; type: string; discount: number; shipping_discount: number }[];
   /** Where staff can move it from here — decided by the backend. */
   next_statuses: OnlineOrderStatus[];
 }
@@ -434,10 +438,12 @@ export interface Offer {
   ends_at_day_end: boolean;
 }
 
+/** Per-product sale prices. Listed on the unified Offers page (promotionsApi.list, type "product_price"). */
 export const offersApi = {
   list: () => api.get<Offer[]>('/offers/').then((r) => r.data),
   /** expires_at: "YYYY-MM-DD" = the offer's last day (runs through that whole day, Cairo time). */
-  create: (payload: { product_id: string; title: string; offer_price: number; expires_at?: string }) =>
+  /** is_active false: saved switched off (e.g. a copy) — changes no price yet. */
+  create: (payload: { product_id: string; title: string; offer_price: number; expires_at?: string | null; is_active?: boolean }) =>
     api.post<Offer>('/offers/', payload).then((r) => r.data),
   update: (id: string, payload: Partial<{ title: string; offer_price: number; is_active: boolean; expires_at: string | null }>) =>
     api.patch<Offer>(`/offers/${id}`, payload).then((r) => r.data),
@@ -515,4 +521,135 @@ export const merchandisingApi = {
   featuredRoutines: () => api.get<FeaturedRoutineSlot[]>('/merchandising/featured-routines').then((r) => r.data),
   setFeaturedRoutines: (routineIds: string[]) =>
     api.put<FeaturedRoutineSlot[]>('/merchandising/featured-routines', { routine_ids: routineIds }).then((r) => r.data),
+};
+
+// ---------------- Offer Builder (cart-level promotions — backend app/promotions.py) ----------------
+export type PromotionType = 'bundle' | 'free_shipping' | 'percentage' | 'fixed_amount' | 'buy_x_get_y';
+/** Every offer type the Offers page lists: cart offers plus per-product sale prices (/offers). */
+export type OfferListType = PromotionType | 'product_price';
+export type PromotionStatus = 'draft' | 'active' | 'inactive';
+/** status plus the dates: an active offer before its start is "scheduled", after its end "expired". */
+export type PromotionState = 'draft' | 'scheduled' | 'active' | 'expired' | 'inactive';
+export type PromotionSort = 'newest' | 'oldest' | 'name' | 'priority' | 'starts' | 'ends' | 'usage';
+
+export interface PromotionTarget {
+  id: string;
+  name: string;
+  /** Units per bundle (fixed bundles); 1 otherwise. */
+  quantity: number;
+}
+
+export interface Promotion {
+  /** "product_offer": a per-product sale price (type "product_price",
+   * config {product_id, offer_price, original_price}) — edited through offersApi. */
+  source: 'promotion' | 'product_offer';
+  id: string;
+  name: string;
+  description: string | null;
+  badge_text: string | null;
+  type: OfferListType;
+  status: PromotionStatus;
+  state: PromotionState;
+  /** What the offer gives, in one line (from the backend). */
+  summary: string;
+  starts_at: string | null;
+  ends_at: string | null;
+  priority: number;
+  combinable: boolean;
+  min_subtotal: number | null;
+  usage_limit: number | null;
+  per_customer_limit: number | null;
+  used_count: number;
+  orders_count: number;
+  /** Used by an order: type/settings/products/minimum can't change any more. */
+  terms_locked: boolean;
+  config: Record<string, unknown>;
+  eligible_products: PromotionTarget[];
+  eligible_categories: PromotionTarget[];
+  reward_products: PromotionTarget[];
+  reward_categories: PromotionTarget[];
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface PromotionInput {
+  name: string;
+  description?: string | null;
+  badge_text?: string | null;
+  type: PromotionType;
+  status: PromotionStatus;
+  /** "YYYY-MM-DD" — from the start of that day / through the end of that day, Cairo time. */
+  starts_at?: string | null;
+  ends_at?: string | null;
+  priority: number;
+  combinable: boolean;
+  min_subtotal?: number | null;
+  usage_limit?: number | null;
+  per_customer_limit?: number | null;
+  config: Record<string, unknown>;
+  eligible_product_ids: string[];
+  eligible_category_ids: string[];
+  reward_product_ids: string[];
+  reward_category_ids: string[];
+  /** Fixed bundles: units per bundle of each product (missing = 1). */
+  product_quantities?: Record<string, number>;
+}
+
+export interface PromotionPage {
+  items: Promotion[];
+  total: number;
+  limit: number;
+  offset: number;
+  /** Per state for the current search/type, before the state filter (plus "total"). */
+  counts: Partial<Record<PromotionState | 'total', number>>;
+}
+
+export interface PromotionPreview {
+  lines: { product_id: string; product_name: string; quantity: number; unit_price: number; line_total: number; discount: number; free_units: number }[];
+  subtotal: number;
+  applied: boolean;
+  reason: string | null;
+  discount: number;
+  shipping_fee: number | null;
+  shipping_discount: number;
+  total: number;
+  summary: string;
+  detail: Record<string, unknown>;
+}
+
+export const promotionsApi = {
+  list: (params: { q?: string; type?: OfferListType; state?: PromotionState; sort?: PromotionSort; limit?: number; offset?: number }) =>
+    api.get<PromotionPage>('/promotions/', { params }).then((r) => r.data),
+  get: (id: string) => api.get<Promotion>(`/promotions/${id}`).then((r) => r.data),
+  create: (payload: PromotionInput) => api.post<Promotion>('/promotions/', payload).then((r) => r.data),
+  update: (id: string, payload: PromotionInput) => api.put<Promotion>(`/promotions/${id}`, payload).then((r) => r.data),
+  activate: (id: string) => api.post<Promotion>(`/promotions/${id}/activate`).then((r) => r.data),
+  deactivate: (id: string) => api.post<Promotion>(`/promotions/${id}/deactivate`).then((r) => r.data),
+  duplicate: (id: string) => api.post<Promotion>(`/promotions/${id}/duplicate`).then((r) => r.data),
+  remove: (id: string) => api.delete(`/promotions/${id}`),
+  preview: (promotion: PromotionInput, items: { product_id: string; quantity: number }[], city?: string) =>
+    api.post<PromotionPreview>('/promotions/preview', { promotion, items, city: city || null }).then((r) => r.data),
+};
+
+// ---------------- Storefront settings: the announcement bar ----------------
+export interface AnnouncementBarSettings {
+  enabled: boolean;
+  text_ar: string | null;
+  text_en: string | null;
+  scrolling: boolean;
+  /** auto: follows each language's reading direction. */
+  direction: 'auto' | 'right' | 'left';
+  speed: 'slow' | 'normal' | 'fast';
+  visibility: 'all' | 'desktop' | 'mobile';
+  theme: 'default' | 'brand' | 'light' | 'accent';
+  /** A site path ("/products") or an https:// address; null = not clickable. */
+  link_url: string | null;
+}
+
+export const announcementBarApi = {
+  get: () => api.get<AnnouncementBarSettings>('/merchandising/announcement-bar').then((r) => r.data),
+  save: (payload: AnnouncementBarSettings) =>
+    api.put<AnnouncementBarSettings>('/merchandising/announcement-bar', payload).then((r) => r.data),
 };
