@@ -177,9 +177,18 @@ export default function OnlineOrdersPage() {
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: 'var(--ink-muted)' }}>
                             <span>الإجمالي الفرعي: {o.subtotal.toLocaleString('ar-EG')} ج.م</span>
+                            {o.promotion_discount > 0 && <span>خصم العروض: -{o.promotion_discount.toLocaleString('ar-EG')} ج.م</span>}
                             {o.discount_amount > 0 && <span>الخصم: -{o.discount_amount.toLocaleString('ar-EG')} ج.م</span>}
                             <span>الشحن: {o.shipping_fee === 0 ? 'مجاني' : `${o.shipping_fee} ج.م`}</span>
                           </div>
+                          {o.applied_promotions.length > 0 && (
+                            <div style={{ fontSize: 12.5, color: 'var(--ink-muted)', marginTop: 6 }}>
+                              العروض المطبّقة:{' '}
+                              {o.applied_promotions.map((p) => (
+                                `${p.name} (${p.shipping_discount > 0 ? `شحن مجاني -${p.shipping_discount.toLocaleString('ar-EG')}` : `-${p.discount.toLocaleString('ar-EG')}`} ج.م)`
+                              )).join('، ')}
+                            </div>
+                          )}
                         </div>
                       </td>
                     </tr>

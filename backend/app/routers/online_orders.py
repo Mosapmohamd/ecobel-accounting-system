@@ -2,7 +2,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 
-from .. import models, schemas, auth, services
+from .. import models, promotions, schemas, auth, services
 from ..database import get_db
 
 router = APIRouter(prefix="/online-orders", tags=["Online Orders"], dependencies=[Depends(auth.get_current_user)])
@@ -34,7 +34,7 @@ def update_order_status(order_id: str, payload: schemas.OnlineOrderStatusUpdate,
 
     # Cancelling from here (staff side) needs the same cleanup the customer's
     # own cancellation does — release the reserved stock, the coupon use and
-    # reverse the revenue — since staff can cancel orders the customer never
+    # the offer uses (app/promotions.py), and reverse the revenue — since staff can cancel orders the customer never
     # touched (failed delivery, out of stock, etc.). The transition rules
     # above guarantee this runs at most once per order.
     if payload.status == models.OrderStatus.cancelled:
@@ -47,6 +47,7 @@ def update_order_status(order_id: str, payload: schemas.OnlineOrderStatusUpdate,
                 )
         if order.coupon is not None and order.coupon.used_count > 0:
             order.coupon.used_count -= 1
+        promotions.count_use(db, models, {op.promotion_id for op in order.applied_promotions}, -1)
         db.add(models.FinanceEntry(
             type=models.FinanceEntryType.expense,
             category="إلغاء طلب موقع",

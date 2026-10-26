@@ -125,7 +125,8 @@ def export_online_orders(
         ws.append(_safe_row([
             o.order_number, o.customer_name, o.customer_phone, o.city or "", o.shipping_address,
             STATUS_LABEL.get(o.status.value, o.status.value), items_str,
-            o.subtotal, o.discount_amount, o.shipping_fee, o.total_amount,
+            # "الخصم" = cart offers + coupon, so subtotal − discount + shipping = total
+            o.subtotal, round((o.promotion_discount or 0) + o.discount_amount, 2), o.shipping_fee, o.total_amount,
             o.created_at.strftime("%Y-%m-%d %H:%M") if o.created_at else "",
         ]))
     return _xlsx_response(wb, export_filename("Online_Orders_Report", status.value if status else None))

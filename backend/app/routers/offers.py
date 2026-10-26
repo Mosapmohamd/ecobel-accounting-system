@@ -50,7 +50,8 @@ def create_offer(payload: schemas.OfferCreate, db: Session = Depends(get_db)):
         raise HTTPException(404, "المنتج غير موجود")
     if payload.offer_price >= product.sale_price:
         raise HTTPException(400, "سعر العرض لازم يكون أقل من السعر الأصلي")
-    _ensure_single_active_offer(db, payload.product_id)
+    if payload.is_active:
+        _ensure_single_active_offer(db, payload.product_id)
 
     title = _clean_title(payload.title)
     offer = models.Offer(
@@ -58,6 +59,7 @@ def create_offer(payload: schemas.OfferCreate, db: Session = Depends(get_db)):
         title=title,
         offer_price=payload.offer_price,
         expires_at=payload.expires_at,
+        is_active=payload.is_active,
     )
     db.add(offer)
     db.commit()

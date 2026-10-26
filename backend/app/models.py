@@ -4,9 +4,10 @@ from datetime import datetime, timezone
 
 from sqlalchemy import (
     Column, String, Integer, Float, DateTime, ForeignKey, Enum, Text, Boolean, UniqueConstraint,
-    CheckConstraint, Index, text,
+    CheckConstraint, Index, JSON, text,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import backref, relationship
 
 from .database import Base
 from .product_images import public_url
@@ -318,7 +319,10 @@ class Order(Base):
 
     subtotal = Column(Float, nullable=False, default=0)
     coupon_id = Column(String, ForeignKey("coupons.id"), nullable=True)
-    discount_amount = Column(Float, nullable=False, default=0)
+    discount_amount = Column(Float, nullable=False, default=0)  # coupon discount
+    # Product discount from promotions (app/promotions.py); the shipping
+    # discount is recorded per offer in order_promotions.
+    promotion_discount = Column(Float, nullable=False, default=0)
     shipping_fee = Column(Float, nullable=False, default=0)
     total_amount = Column(Float, nullable=False, default=0)
 
@@ -507,3 +511,101 @@ class AuthThrottle(Base):
     failures = Column(Integer, nullable=False, default=0)
     window_started_at = Column(DateTime(timezone=True), nullable=False, default=now)
     blocked_until = Column(DateTime(timezone=True), nullable=True)
+
+
+# ---------------------------------------------------------------------------
+# Promotions — the admin Offer Builder's cart-level offers (app/promotions.py
+# holds the rules). Schema: docs/schema-changes/2026-10-24_promotions.sql.
+# ---------------------------------------------------------------------------
+PROMOTION_TYPES = ("bundle", "free_shipping", "percentage", "fixed_amount", "buy_x_get_y")
+PROMOTION_STATUSES = ("draft", "active", "inactive")  # "scheduled"/"expired" are derived from the dates
+
+JSONType = JSON().with_variant(JSONB(), "postgresql")
+
+
+class Promotion(Base):
+    __tablename__ = "promotions"
+    __table_args__ = (
+        CheckConstraint("starts_at IS NULL OR ends_at IS NULL OR starts_at < ends_at", name="ck_promotions_dates"),
+    )
+
+    id = Column(String, primary_key=True, default=gen_id)
+    name = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    badge_text = Column(String, nullable=True)
+    type = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="draft")
+    starts_at = Column(DateTime(timezone=True), nullable=True)
+    ends_at = Column(DateTime(timezone=True), nullable=True)
+    priority = Column(Integer, nullable=False, default=0)
+    combinable = Column(Boolean, nullable=False, default=False)
+    min_subtotal = Column(Float, nullable=True)
+    usage_limit = Column(Integer, nullable=True)
+    per_customer_limit = Column(Integer, nullable=True)
+    used_count = Column(Integer, nullable=False, default=0)
+    config = Column(JSONType, nullable=False, default=dict)
+    created_by = Column(String, nullable=True)
+    updated_by = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=now)
+    updated_at = Column(DateTime(timezone=True), default=now, onupdate=now)
+
+    targets = relationship("PromotionTarget", back_populates="promotion", cascade="all, delete-orphan")
+
+
+class PromotionTarget(Base):
+    """A product or a category an offer applies to ('eligible') or gives
+    away ('reward', Buy X Get Y). Exactly one of product_id / category_id."""
+    __tablename__ = "promotion_targets"
+    __table_args__ = (
+        CheckConstraint("(product_id IS NULL) <> (category_id IS NULL)", name="ck_promotion_targets_one_target"),
+        CheckConstraint("quantity BETWEEN 1 AND 50", name="ck_promotion_targets_quantity"),
+        Index("ix_promotion_targets_promotion", "promotion_id"),
+    )
+
+    id = Column(String, primary_key=True, default=gen_id)
+    promotion_id = Column(String, ForeignKey("promotions.id", ondelete="CASCADE"), nullable=False)
+    role = Column(String, nullable=False)
+    product_id = Column(String, ForeignKey("products.id"), nullable=True)
+    category_id = Column(String, ForeignKey("categories.id"), nullable=True)
+    # Units of this product in a FIXED bundle (config.mode "combination");
+    # 1 everywhere else. Schema: docs/schema-changes/2026-10-26_*.sql.
+    quantity = Column(Integer, nullable=False, default=1, server_default=text("1"))
+
+    promotion = relationship("Promotion", back_populates="targets")
+
+
+class OrderPromotion(Base):
+    """What one order received from one offer — with a snapshot of the
+    offer's terms at purchase time, so the order stays explainable after the
+    offer changes. promotion_id is intentionally not a foreign key."""
+    __tablename__ = "order_promotions"
+    __table_args__ = (
+        Index("ix_order_promotions_order", "order_id"),
+        Index("ix_order_promotions_promotion_customer", "promotion_id", "customer_id"),
+    )
+
+    id = Column(String, primary_key=True, default=gen_id)
+    order_id = Column(String, ForeignKey("orders.id"), nullable=False)
+    promotion_id = Column(String, nullable=False)
+    customer_id = Column(String, ForeignKey("customers.id"), nullable=True)
+    name = Column(String, nullable=False)
+    type = Column(String, nullable=False)
+    terms = Column(JSONType, nullable=False, default=dict)
+    discount = Column(Float, nullable=False, default=0)
+    shipping_discount = Column(Float, nullable=False, default=0)
+    details = Column(JSONType, nullable=False, default=dict)
+    created_at = Column(DateTime(timezone=True), default=now)
+
+    order = relationship("Order", backref=backref("applied_promotions", order_by="OrderPromotion.created_at"))
+
+
+class StorefrontSetting(Base):
+    """Runtime storefront settings, one validated JSON value per key (e.g.
+    "announcement_bar") — read by the storefront without a rebuild, edited
+    in the accounting system. Never HTML or CSS: structured fields only."""
+    __tablename__ = "storefront_settings"
+
+    key = Column(String, primary_key=True)
+    value = Column(JSONType, nullable=False, default=dict)
+    updated_by = Column(String, nullable=True)
+    updated_at = Column(DateTime(timezone=True), default=now, onupdate=now)

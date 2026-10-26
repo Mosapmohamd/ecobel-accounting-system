@@ -45,6 +45,8 @@ function AppRoutes() {
         <Route path="online-orders" element={<OnlineOrdersPage />} />
         <Route path="sales-analytics" element={<SalesAnalyticsPage />} />
         <Route path="offers" element={<OffersPage />} />
+        {/* The former Offer Builder lives inside the Offers page now. */}
+        <Route path="promotions" element={<Navigate to="/offers" replace />} />
         <Route path="routines" element={<RoutinesPage />} />
         <Route path="shipping-rates" element={<ShippingRatesPage />} />
         <Route path="reports" element={<ReportsPage />} />
