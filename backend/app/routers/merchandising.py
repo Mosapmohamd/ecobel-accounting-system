@@ -24,6 +24,17 @@ def _product_issue(p: models.Product) -> str | None:
     return None
 
 
+OUT_OF_STOCK_NOTE = "نفد من المخزون — بيظهر في الموقع كـ «نفد من المخزون» ومش متاح للشراء"
+
+
+def _featured_slot(r: models.FeaturedProduct) -> schemas.FeaturedProductSlot:
+    """A featured product shows on the homepage while it's active — out of
+    stock included (as «نفد من المخزون», not purchasable)."""
+    p = r.product
+    issue = "المنتج متوقف" if not p.is_active else (OUT_OF_STOCK_NOTE if p.quantity <= 0 else None)
+    return schemas.FeaturedProductSlot(position=r.position, product=p, is_visible=bool(p.is_active), issue=issue)
+
+
 def _routine_issue(r: models.Routine) -> str | None:
     if not r.is_active:
         return "الروتين متوقف"
@@ -54,10 +65,7 @@ def get_featured_products(db: Session = Depends(get_db)):
         .order_by(models.FeaturedProduct.position)
         .all()
     )
-    return [
-        schemas.FeaturedProductSlot(position=r.position, product=r.product, is_visible=_product_issue(r.product) is None, issue=_product_issue(r.product))
-        for r in rows
-    ]
+    return [_featured_slot(r) for r in rows]
 
 
 @router.put("/featured-products", response_model=List[schemas.FeaturedProductSlot])
@@ -71,9 +79,8 @@ def set_featured_products(payload: schemas.FeaturedProductsUpdate, db: Session =
         p = products.get(pid)
         if p is None:
             raise HTTPException(404, "في منتج في القائمة مش موجود")
-        issue = _product_issue(p)
-        if issue:
-            raise HTTPException(400, f"{p.name}: {issue} — مينفعش يظهر في الصفحة الرئيسية")
+        if not p.is_active:
+            raise HTTPException(400, f"{p.name}: المنتج متوقف — مينفعش يظهر في الصفحة الرئيسية")
 
     db.query(models.FeaturedProduct).delete()
     db.flush()

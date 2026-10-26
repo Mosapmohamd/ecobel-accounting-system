@@ -40,6 +40,12 @@ def seed():
             discount_amount=10, shipping_fee=0, total_amount=190, coupon_id="ocp",
         ))
         db.add(models.OrderItem(order_id=oid, product_id="op1", product_name="Serum", unit_price=100, quantity=2, line_total=200))
+    # o_cancel as checkout left it: its 2 units deducted (a website_sale
+    # movement), and — like orders placed before revenue waited for delivery —
+    # its total booked as income at checkout.
+    db.add(models.InventoryMovement(product_id="op1", type=models.MovementType.website_sale, quantity_change=-2, reference_id="o_cancel"))
+    db.add(models.FinanceEntry(type=models.FinanceEntryType.income, category="مبيعات الموقع", amount=190,
+                               reference_id="o_cancel", source="website"))
     db.commit()
     db.close()
 

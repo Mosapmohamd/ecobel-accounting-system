@@ -299,9 +299,13 @@ class DashboardSummary(BaseModel):
     total_products: int
     low_stock_count: int
     out_of_stock_count: int
-    period_income: float
-    period_expense: float
-    period_b2b_sales: float
+    # Sales revenue = completed AND paid orders (app/revenue.py).
+    period_revenue: float = 0
+    period_online_revenue: float = 0
+    period_b2b_sales: float           # B2B part of period_revenue
+    period_other_income: float = 0    # manual income entries (not sales)
+    period_income: float              # period_revenue + period_other_income
+    period_expense: float             # operating expenses (revenue reversals excluded)
     free_distribution_events: int     # number of distribution records in the period
     free_distribution_pieces: int     # total units given away as samples in the period
 
@@ -436,8 +440,9 @@ class TopProduct(BaseModel):
 
 class SalesAnalytics(BaseModel):
     source: str                       # echoes back "all" / "online" / "b2b"
-    total_revenue: float
-    total_orders: int
+    total_revenue: float              # recognized: completed + paid website orders
+    total_orders: int                 # orders behind total_revenue
+    b2b_sales: float = 0              # booked B2B sales — NOT part of total_revenue
     orders_by_status: dict[str, int]
     revenue_last_30_days: List[RevenuePoint]
     top_products: List[TopProduct]

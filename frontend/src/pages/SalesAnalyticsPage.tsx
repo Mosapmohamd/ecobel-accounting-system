@@ -66,13 +66,19 @@ export default function SalesAnalyticsPage() {
         <>
           <div className="kpi-grid">
             <div className="kpi-card">
-              <div className="label">إجمالي الإيرادات</div>
+              <div className="label">إيراد المبيعات (مكتملة ومدفوعة)</div>
               <div className="value">{money(data.total_revenue)}</div>
             </div>
-            <div className="kpi-card">
-              <div className="label">إجمالي الطلبات</div>
+            <div className="kpi-card" title="طلبات الموقع اللي اتسلّمت واتحصّلت">
+              <div className="label">الطلبات المكتملة</div>
               <div className="value">{data.total_orders}</div>
             </div>
+            {data.source !== 'online' && (
+              <div className="kpi-card" title="مبيعات الجملة المسجّلة — مش محسوبة في الإيراد لحد ما يبقى للأوردرات حالة تسليم ودفع">
+                <div className="label">مبيعات الجملة B2B (خارج الإيراد)</div>
+                <div className="value">{money(data.b2b_sales)}</div>
+              </div>
+            )}
             {Object.entries(data.orders_by_status).map(([status, count]) => (
               <div className="kpi-card" key={status}>
                 <div className="label">{statusLabel[status] || status}</div>

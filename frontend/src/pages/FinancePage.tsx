@@ -40,15 +40,15 @@ export default function FinancePage() {
 
       <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
         <div className="kpi-card">
-          <div className="label">إجمالي الإيرادات</div>
+          <div className="label" title="مجموع قيود الإيراد المعروضة — إيراد المبيعات (المكتملة والمدفوعة بس) في لوحة التحكم">إجمالي قيود الإيراد</div>
           <div className="value" style={{ color: 'var(--ok-strong)' }}>{totalIncome.toLocaleString('ar-EG')} ج.م</div>
         </div>
         <div className="kpi-card">
-          <div className="label">إجمالي المصروفات</div>
+          <div className="label" title="بيشمل قيود عكس الإيراد (إلغاء طلبات)">إجمالي قيود المصروف</div>
           <div className="value" style={{ color: 'var(--rose-text)' }}>{totalExpense.toLocaleString('ar-EG')} ج.م</div>
         </div>
         <div className="kpi-card">
-          <div className="label">الصافي</div>
+          <div className="label">صافي القيود</div>
           <div className="value">{(totalIncome - totalExpense).toLocaleString('ar-EG')} ج.م</div>
         </div>
       </div>

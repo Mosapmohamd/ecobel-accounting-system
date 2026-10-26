@@ -65,16 +65,20 @@ export default function DashboardPage() {
       ) : (
         <>
           <div className="kpi-grid">
-            <div className="kpi-card">
-              <div className="label">إيرادات {periodNoun(period)}</div>
-              <div className="value">{money(summary.period_income)}</div>
+            <div className="kpi-card" title="طلبات الموقع اللي اتسلّمت واتحصّلت (دفع عند الاستلام) بس — اللي لسه ما اتسلّمتش أو اتلغت، وأوردرات الجملة، مش محسوبة">
+              <div className="label">إيراد المبيعات {periodNoun(period)}</div>
+              <div className="value">{money(summary.period_revenue)}</div>
+              <div style={{ fontSize: 12, color: 'var(--ink-muted)', marginTop: 4 }}>
+                طلبات الموقع المكتملة والمدفوعة
+                {summary.period_other_income > 0 && <> · إيرادات أخرى {money(summary.period_other_income)}</>}
+              </div>
             </div>
             <div className="kpi-card">
               <div className="label">مصروفات {periodNoun(period)}</div>
               <div className="value">{money(summary.period_expense)}</div>
             </div>
-            <div className="kpi-card">
-              <div className="label">مبيعات الجملة B2B</div>
+            <div className="kpi-card" title="مبيعات الجملة المسجّلة — مش محسوبة في الإيراد لحد ما يبقى للأوردرات حالة تسليم ودفع">
+              <div className="label">مبيعات الجملة B2B (خارج الإيراد)</div>
               <div className="value" style={{ color: 'var(--ok-strong)' }}>{money(summary.period_b2b_sales)}</div>
             </div>
             <div className="kpi-card">

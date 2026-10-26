@@ -63,10 +63,14 @@ def test_featured_products_validation():
     assert put_products([f"p{i}" for i in range(1, 10)]).status_code == 422  # 9 > max 8
     assert put_products(["p1", "p1"]).status_code == 400
     assert put_products(["off"]).status_code == 400
-    assert put_products(["empty"]).status_code == 400
     assert put_products(["nope"]).status_code == 404
     # A rejected save leaves the previous selection untouched.
     assert [s["product"]["id"] for s in client.get("/merchandising/featured-products", headers=H).json()] == ["p1", "p4"]
+    # An out-of-stock product can be featured: the storefront lists it as
+    # «نفد من المخزون» (not purchasable).
+    res = put_products(["p1", "p4", "empty"])
+    assert res.status_code == 200 and res.json()[2]["is_visible"] is True and "نفد من المخزون" in res.json()[2]["issue"]
+    put_products(["p1", "p4"])
 
 
 def test_clear_featured_products():
@@ -80,7 +84,14 @@ def test_featured_product_turning_unsellable_is_flagged_not_hidden_from_staff():
     db.commit()
     db.close()
     slot = client.get("/merchandising/featured-products", headers=H).json()[0]
-    assert slot["is_visible"] is False and slot["issue"]
+    # out of stock: still on the homepage (as out of stock), and staff are told
+    assert slot["is_visible"] is True and "نفد من المخزون" in slot["issue"]
+    db = SessionLocal()
+    db.get(models.Product, "p5").is_active = False
+    db.commit()
+    db.close()
+    slot = client.get("/merchandising/featured-products", headers=H).json()[0]
+    assert slot["is_visible"] is False and slot["issue"] == "المنتج متوقف"
 
 
 def test_featured_routines_validation_and_delete_frees_slot():

@@ -6,7 +6,7 @@ from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
 
-from .. import models, schemas, auth, product_images
+from .. import models, schemas, auth, product_images, services
 from ..database import get_db
 
 
@@ -59,8 +59,16 @@ def create_product(payload: schemas.ProductCreate, db: Session = Depends(get_db)
     if duplicate:
         raise HTTPException(400, "منتج بنفس الاسم موجود بالفعل في نفس الفئة")
 
-    product = models.Product(**payload.model_dump())
+    # Opening stock goes through the inventory ledger like every other stock
+    # change, so the product's quantity always equals the sum of its
+    # movements (stock history and reports stay complete).
+    data = payload.model_dump()
+    opening = data.pop("quantity", 0) or 0
+    product = models.Product(**data, quantity=0)
     db.add(product)
+    db.flush()
+    if opening > 0:
+        services.apply_stock_movement(db, product, opening, models.MovementType.restock, note="رصيد افتتاحي عند إضافة المنتج")
     db.commit()
     db.refresh(product)
     return product

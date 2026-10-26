@@ -130,9 +130,17 @@ export interface DashboardSummary {
   total_products: number;
   low_stock_count: number;
   out_of_stock_count: number;
-  period_income: number;
-  period_expense: number;
+  /** Sales revenue: completed AND paid website orders only (backend app/revenue.py). */
+  period_revenue: number;
+  period_online_revenue: number;
+  /** Booked B2B sales — shown on their own, NOT part of period_revenue. */
   period_b2b_sales: number;
+  /** Income entered manually — not sales. */
+  period_other_income: number;
+  /** period_revenue + period_other_income. */
+  period_income: number;
+  /** Operating expenses (revenue reversals are not expenses). */
+  period_expense: number;
   free_distribution_events: number;
   free_distribution_pieces: number;
 }
@@ -407,8 +415,11 @@ export interface TopProduct {
 
 export interface SalesAnalytics {
   source: SalesSource;
+  /** Recognized: completed AND paid website orders. */
   total_revenue: number;
   total_orders: number;
+  /** Booked B2B sales — NOT part of total_revenue. */
+  b2b_sales: number;
   orders_by_status: Record<string, number>;
   revenue_last_30_days: RevenuePoint[];
   top_products: TopProduct[];
