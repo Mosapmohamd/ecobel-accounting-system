@@ -392,11 +392,24 @@ export interface OnlineOrder {
   next_statuses: OnlineOrderStatus[];
 }
 
+/** One staff status change (audit trail). */
+export interface OrderStatusChange {
+  from_status: OnlineOrderStatus;
+  to_status: OnlineOrderStatus;
+  changed_by: string;
+  /** + revenue recognized / − revenue reversed by this change. */
+  revenue_change: number;
+  units_restored: number;
+  created_at: string;
+}
+
 export const onlineOrdersApi = {
   list: (status?: OnlineOrderStatus) =>
     api.get<OnlineOrder[]>('/online-orders/', { params: status ? { status } : undefined }).then((r) => r.data),
   updateStatus: (id: string, status: OnlineOrderStatus) =>
     api.patch<OnlineOrder>(`/online-orders/${id}/status`, { status }).then((r) => r.data),
+  statusHistory: (id: string) =>
+    api.get<OrderStatusChange[]>(`/online-orders/${id}/status-history`).then((r) => r.data),
 };
 
 // ---------------- Unified sales analytics ----------------

@@ -376,10 +376,15 @@ class OnlineOrderItemOut(BaseModel):
 # The order lifecycle. Cancelling releases stock and reverses revenue, so a
 # cancelled order can't be revived (that would sell stock it no longer
 # holds); delivered is final too.
+# Where staff can move a website order (the admin status dropdown). Steps
+# can be skipped (pending → delivered); a shipment can go back to pending;
+# a delivered order can only be cancelled (its revenue is reversed and its
+# stock given back — app/order_ledger.py); a cancelled order is final (its
+# stock and coupon were released, so reviving it could oversell).
 ORDER_TRANSITIONS: dict[OrderStatus, List[OrderStatus]] = {
-    OrderStatus.pending: [OrderStatus.shipped, OrderStatus.cancelled],
-    OrderStatus.shipped: [OrderStatus.delivered, OrderStatus.cancelled],
-    OrderStatus.delivered: [],
+    OrderStatus.pending: [OrderStatus.shipped, OrderStatus.delivered, OrderStatus.cancelled],
+    OrderStatus.shipped: [OrderStatus.pending, OrderStatus.delivered, OrderStatus.cancelled],
+    OrderStatus.delivered: [OrderStatus.cancelled],
     OrderStatus.cancelled: [],
 }
 
@@ -423,7 +428,17 @@ class OnlineOrderOut(BaseModel):
 
 
 class OnlineOrderStatusUpdate(BaseModel):
-    status: OrderStatus
+    status: OrderStatus  # only the enum's values are accepted (422 otherwise)
+
+
+class OrderStatusChangeOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    from_status: OrderStatus
+    to_status: OrderStatus
+    changed_by: str
+    revenue_change: float
+    units_restored: int
+    created_at: datetime
 
 
 # ---------------- Online store: sales analytics ----------------

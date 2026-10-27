@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from 'react';
-import { onlineOrdersApi, type OnlineOrder, type OnlineOrderStatus } from '../lib/api';
+import { onlineOrdersApi, type OnlineOrder, type OnlineOrderStatus, type OrderStatusChange } from '../lib/api';
 import { useConfirm } from '../lib/useConfirm';
+import { useToast } from '../lib/toast';
 
 const statusLabel: Record<OnlineOrderStatus, string> = {
   pending: 'قيد التجهيز',
@@ -10,25 +11,21 @@ const statusLabel: Record<OnlineOrderStatus, string> = {
 };
 const statuses: OnlineOrderStatus[] = ['pending', 'shipped', 'delivered', 'cancelled'];
 
-// Every move is one-way (the backend allows no going back), so each one
-// is confirmed and says what it does.
-const transition: Record<Exclude<OnlineOrderStatus, 'pending'>, { action: string; title: string; message: string }> = {
-  shipped: {
-    action: 'تم الشحن',
-    title: 'تسليم الطلب للشحن؟',
-    message: 'العميلة مش هتقدر تعدّل الطلب أو تلغيه من الموقع بعد كده.',
-  },
-  delivered: {
-    action: 'تم التوصيل',
-    title: 'تأكيد توصيل الطلب؟',
-    message: 'الطلب هيتقفل كـ«تم التوصيل» ومينفعش تتغير حالته بعد كده.',
-  },
-  cancelled: {
-    action: 'إلغاء الطلب',
-    title: 'إلغاء الطلب؟',
-    message: 'الكميات هترجع للمخزون، والكوبون (لو موجود) هيرجع متاح، وهيتسجل عكس للإيراد. الإلغاء نهائي.',
-  },
-};
+// The dropdown offers only the statuses the backend allows from the current
+// one (`next_statuses`); every change is confirmed and says what it does.
+function changeMessage(from: OnlineOrderStatus, to: OnlineOrderStatus): string {
+  if (to === 'pending') return 'الطلب هيرجع «قيد التجهيز» — العميلة هتقدر تعدّله أو تلغيه من الموقع تاني.';
+  if (to === 'shipped') return 'العميلة مش هتقدر تعدّل الطلب أو تلغيه من الموقع بعد كده.';
+  if (to === 'delivered')
+    return 'الدفع عند الاستلام: التوصيل معناه إن المبلغ اتحصّل، فإيراد الطلب هيتسجل. بعد كده الحالة الوحيدة المسموحة هي الإلغاء.';
+  if (from === 'delivered')
+    return 'الطلب اتسلّم قبل كده: هيتسجل قيد عكس لإيراده (القيد الأصلي بيفضل في السجل)، والكميات هترجع للمخزون على أساس إن البضاعة رجعت، والكوبون (لو موجود) هيرجع متاح. الإلغاء نهائي.';
+  return 'الكميات هترجع للمخزون، والكوبون (لو موجود) هيرجع متاح، ولو كان اتسجل إيراد هيتعكس. الإلغاء نهائي.';
+}
+
+function money(n: number): string {
+  return `${n.toLocaleString('ar-EG')} ج.م`;
+}
 
 export default function OnlineOrdersPage() {
   const [orders, setOrders] = useState<OnlineOrder[]>([]);
@@ -36,7 +33,11 @@ export default function OnlineOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+  // the status picked in each row's dropdown, until it's saved
+  const [picked, setPicked] = useState<Record<string, OnlineOrderStatus>>({});
+  const [history, setHistory] = useState<Record<string, OrderStatusChange[] | 'error'>>({});
   const confirmDialog = useConfirm();
+  const toast = useToast();
 
   function load() {
     setLoading(true);
@@ -48,15 +49,35 @@ export default function OnlineOrdersPage() {
   }
   useEffect(load, [statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function changeStatus(order: OnlineOrder, status: Exclude<OnlineOrderStatus, 'pending'>) {
-    const t = transition[status];
+  function loadHistory(orderId: string) {
+    onlineOrdersApi
+      .statusHistory(orderId)
+      .then((h) => setHistory((prev) => ({ ...prev, [orderId]: h })))
+      .catch(() => setHistory((prev) => ({ ...prev, [orderId]: 'error' })));
+  }
+
+  function toggleDetails(orderId: string) {
+    const open = expanded === orderId ? null : orderId;
+    setExpanded(open);
+    if (open) loadHistory(open);
+  }
+
+  function saveStatus(order: OnlineOrder, status: OnlineOrderStatus) {
     confirmDialog.ask({
-      title: `${t.title} (#${order.order_number})`,
-      message: t.message,
-      confirmLabel: t.action,
+      title: `تغيير حالة الطلب #${order.order_number}: ${statusLabel[order.status]} ← ${statusLabel[status]}؟`,
+      message: changeMessage(order.status, status),
+      confirmLabel: status === 'cancelled' ? 'إلغاء الطلب' : 'حفظ الحالة',
       danger: status === 'cancelled',
       action: async () => {
-        await onlineOrdersApi.updateStatus(order.id, status);
+        const updated = await onlineOrdersApi.updateStatus(order.id, status);
+        setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+        setPicked((prev) => {
+          const next = { ...prev };
+          delete next[order.id];
+          return next;
+        });
+        toast(`طلب #${order.order_number}: ${statusLabel[updated.status]}`);
+        if (expanded === order.id) loadHistory(order.id);
         load();
       },
     });
@@ -127,20 +148,33 @@ export default function OnlineOrdersPage() {
                     <td>{statusLabel[o.status]}</td>
                     <td>
                       {o.next_statuses.length === 0 ? (
-                        <span style={{ color: 'var(--ink-muted)', fontSize: 12.5 }}>—</span>
+                        <span style={{ color: 'var(--ink-muted)', fontSize: 12.5 }}>— (حالة نهائية)</span>
                       ) : (
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          {o.next_statuses.map((s) =>
-                            s === 'pending' ? null : (
-                              <button
-                                key={s}
-                                className={`btn ${s === 'cancelled' ? 'btn-danger' : 'btn-secondary'}`}
-                                style={{ padding: '5px 10px', fontSize: 12.5 }}
-                                onClick={() => changeStatus(o, s)}
-                              >
-                                {transition[s].action}
-                              </button>
-                            ),
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <select
+                            aria-label={`حالة الطلب ${o.order_number}`}
+                            value={picked[o.id] ?? o.status}
+                            onChange={(e) => {
+                              const v = e.target.value as OnlineOrderStatus;
+                              setPicked((prev) => ({ ...prev, [o.id]: v }));
+                            }}
+                            style={{ padding: '5px 8px', fontSize: 12.5 }}
+                          >
+                            <option value={o.status}>{statusLabel[o.status]} (الحالية)</option>
+                            {o.next_statuses.map((s) => (
+                              <option key={s} value={s}>
+                                {statusLabel[s]}
+                              </option>
+                            ))}
+                          </select>
+                          {picked[o.id] && picked[o.id] !== o.status && (
+                            <button
+                              className={`btn ${picked[o.id] === 'cancelled' ? 'btn-danger' : 'btn-secondary'}`}
+                              style={{ padding: '5px 10px', fontSize: 12.5 }}
+                              onClick={() => saveStatus(o, picked[o.id])}
+                            >
+                              حفظ
+                            </button>
                           )}
                         </div>
                       )}
@@ -149,7 +183,7 @@ export default function OnlineOrdersPage() {
                       <button
                         className="btn"
                         style={{ padding: '5px 10px', fontSize: 12.5 }}
-                        onClick={() => setExpanded(expanded === o.id ? null : o.id)}
+                        onClick={() => toggleDetails(o.id)}
                       >
                         {expanded === o.id ? 'إخفاء' : 'التفاصيل'}
                       </button>
@@ -189,6 +223,26 @@ export default function OnlineOrdersPage() {
                               )).join('، ')}
                             </div>
                           )}
+                          <div style={{ fontSize: 12.5, marginTop: 10 }}>
+                            <strong>سجل تغيير الحالة:</strong>{' '}
+                            {history[o.id] === undefined ? (
+                              'جاري التحميل...'
+                            ) : history[o.id] === 'error' ? (
+                              <span style={{ color: 'var(--rose-text)' }}>تعذر تحميل السجل</span>
+                            ) : (history[o.id] as OrderStatusChange[]).length === 0 ? (
+                              <span style={{ color: 'var(--ink-muted)' }}>مفيش تغييرات مسجّلة</span>
+                            ) : (
+                              <ul style={{ margin: '4px 0 0', paddingInlineStart: 18, color: 'var(--ink-muted)' }}>
+                                {(history[o.id] as OrderStatusChange[]).map((h) => (
+                                  <li key={h.created_at + h.to_status}>
+                                    {new Date(h.created_at).toLocaleString('ar-EG')} — {statusLabel[h.from_status]} ← {statusLabel[h.to_status]} — {h.changed_by}
+                                    {h.revenue_change !== 0 && ` · ${h.revenue_change > 0 ? 'إيراد' : 'عكس إيراد'} ${money(Math.abs(h.revenue_change))}`}
+                                    {h.units_restored > 0 && ` · رجوع ${h.units_restored} قطعة للمخزون`}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
                         </div>
                       </td>
                     </tr>

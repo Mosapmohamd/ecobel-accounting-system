@@ -65,7 +65,7 @@ def snapshot():
 
 def test_orders_list_tells_staff_the_allowed_next_statuses():
     orders = {o["id"]: o for o in client.get("/online-orders/", headers=H).json()}
-    assert orders["o_ship"]["next_statuses"] == ["shipped", "cancelled"]
+    assert orders["o_ship"]["next_statuses"] == ["shipped", "delivered", "cancelled"]
 
 
 def test_cancel_releases_stock_coupon_and_revenue_exactly_once():
@@ -82,9 +82,10 @@ def test_cancel_releases_stock_coupon_and_revenue_exactly_once():
     assert snapshot() == (stock + 2, uses - 1, expenses + 1)
 
 
-def test_forward_lifecycle_and_no_skipping_back():
-    assert set_status("o_ship", "delivered").status_code == 409  # must ship first
-    assert set_status("o_ship", "shipped").json()["status"] == "shipped"
+def test_lifecycle_shipped_can_go_back_and_delivered_can_only_be_cancelled():
+    assert set_status("o_ship", "shipped").json()["next_statuses"] == ["pending", "delivered", "cancelled"]
+    assert set_status("o_ship", "pending").json()["status"] == "pending"  # undo "shipped"
+    assert set_status("o_ship", "shipped").status_code == 200
+    assert set_status("o_ship", "delivered").json()["next_statuses"] == ["cancelled"]
     assert set_status("o_ship", "pending").status_code == 409
-    assert set_status("o_ship", "delivered").json()["next_statuses"] == []
-    assert set_status("o_ship", "cancelled").status_code == 409
+    assert set_status("o_ship", "shipped").status_code == 409

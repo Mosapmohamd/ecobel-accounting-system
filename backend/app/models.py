@@ -339,6 +339,21 @@ class Order(Base):
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
 
 
+class OrderStatusChange(Base):
+    """Audit trail of staff status changes on a website order (who, when,
+    from → to, and what it did to revenue and stock). Append-only."""
+    __tablename__ = "order_status_changes"
+
+    id = Column(String, primary_key=True, default=gen_id)
+    order_id = Column(String, ForeignKey("orders.id"), nullable=False, index=True)
+    from_status = Column(String, nullable=False)
+    to_status = Column(String, nullable=False)
+    changed_by = Column(String, nullable=False)          # staff username
+    revenue_change = Column(Float, nullable=False, default=0)   # + recognized / − reversed
+    units_restored = Column(Integer, nullable=False, default=0)  # stock given back
+    created_at = Column(DateTime(timezone=True), default=now)
+
+
 class OrderItem(Base):
     __tablename__ = "order_items"
 
