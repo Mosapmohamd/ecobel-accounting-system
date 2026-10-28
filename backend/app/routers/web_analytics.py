@@ -32,12 +32,24 @@ def sales_analytics(source: Source = Query("all"), db: Session = Depends(get_db)
     item_stats: dict[str, dict] = defaultdict(lambda: {"quantity": 0, "revenue": 0.0})
     total_orders = 0
     b2b_sales = 0.0
+    partial = full = 0
 
     if online:
         for (status,) in db.query(models.Order.status).all():
             status_counts[status.value] += 1
         recognized = revenue.recognized_online_orders(db)
         total_orders = len(recognized)
+        # Partly / fully returned orders, from the return reversals in the ledger.
+        reversed_by: dict[str, float] = defaultdict(float)
+        for l in sales.lines:
+            if l.kind == "return":
+                reversed_by[l.reference_id] -= l.amount
+        for o in recognized:
+            if reversed_by.get(o.id, 0) > 0:
+                if reversed_by[o.id] >= round(o.total_amount - (o.shipping_fee or 0), 2) - 0.005:
+                    full += 1
+                else:
+                    partial += 1
         ids = [o.id for o in recognized]
         if ids:
             for it in db.query(models.OrderItem).filter(models.OrderItem.order_id.in_(ids)).all():
@@ -70,6 +82,9 @@ def sales_analytics(source: Source = Query("all"), db: Session = Depends(get_db)
         total_revenue=sales.total,
         total_orders=total_orders,
         b2b_sales=b2b_sales,
+        returns_total=revenue.returns_total(sales.lines),
+        partially_returned_orders=partial,
+        fully_returned_orders=full,
         orders_by_status=dict(status_counts),
         revenue_last_30_days=revenue_points,
         top_products=top_products,

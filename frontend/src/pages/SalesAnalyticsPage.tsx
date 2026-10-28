@@ -73,6 +73,15 @@ export default function SalesAnalyticsPage() {
               <div className="label">الطلبات المكتملة</div>
               <div className="value">{data.total_orders}</div>
             </div>
+            {data.source !== 'b2b' && (data.returns_total > 0 || data.partially_returned_orders + data.fully_returned_orders > 0) && (
+              <div className="kpi-card" title="اتخصمت من الإيراد (مش مصروفات)">
+                <div className="label">المرتجعات</div>
+                <div className="value">{money(data.returns_total)}</div>
+                <div style={{ fontSize: 12, color: 'var(--ink-muted)', marginTop: 4 }}>
+                  مرتجع جزئي {data.partially_returned_orders} · مرتجع كامل {data.fully_returned_orders}
+                </div>
+              </div>
+            )}
             {data.source !== 'online' && (
               <div className="kpi-card" title="مبيعات الجملة المسجّلة — مش محسوبة في الإيراد لحد ما يبقى للأوردرات حالة تسليم ودفع">
                 <div className="label">مبيعات الجملة B2B (خارج الإيراد)</div>

@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import (
-    Column, String, Integer, Float, DateTime, ForeignKey, Enum, Text, Boolean, UniqueConstraint,
+    Column, String, Integer, Float, Date, DateTime, ForeignKey, Enum, Text, Boolean, UniqueConstraint,
     CheckConstraint, Index, JSON, text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -125,6 +125,7 @@ class MovementType(str, enum.Enum):
     website_sale = "website_sale"           # بيع عادي (سيتكامل مع الموقع في مرحلة لاحقة)
     b2b_sale = "b2b_sale"                   # بيع جملة B2B
     free_distribution = "free_distribution"  # توزيع مجاني (عينات)
+    customer_return = "customer_return"     # مرتجع عميل صالح للبيع (app/returns.py)
 
 
 class InventoryMovement(Base):
@@ -352,6 +353,42 @@ class OrderStatusChange(Base):
     revenue_change = Column(Float, nullable=False, default=0)   # + recognized / − reversed
     units_restored = Column(Integer, nullable=False, default=0)  # stock given back
     created_at = Column(DateTime(timezone=True), default=now)
+
+
+class OrderReturn(Base):
+    """A customer return recorded by staff against a delivered website order
+    (app/returns.py): which units came back, why, when, who processed it,
+    and what it reversed. Append-only."""
+    __tablename__ = "order_returns"
+
+    id = Column(String, primary_key=True, default=gen_id)
+    order_id = Column(String, ForeignKey("orders.id"), nullable=False, index=True)
+    # Client-generated per submission: a retried request finds this row
+    # instead of recording the return twice.
+    request_id = Column(String(64), nullable=False, unique=True)
+    reason = Column(String(200), nullable=False)
+    note = Column(Text, nullable=True)
+    returned_on = Column(Date, nullable=False)          # when the goods came back
+    processed_by = Column(String, nullable=False)       # staff username
+    merchandise_value = Column(Float, nullable=False, default=0)  # value of the returned units
+    revenue_reversed = Column(Float, nullable=False, default=0)   # what the ledger reversed (0 if never recognized)
+    created_at = Column(DateTime(timezone=True), default=now)
+
+    items = relationship("OrderReturnItem", back_populates="order_return", cascade="all, delete-orphan")
+
+
+class OrderReturnItem(Base):
+    __tablename__ = "order_return_items"
+
+    id = Column(String, primary_key=True, default=gen_id)
+    return_id = Column(String, ForeignKey("order_returns.id", ondelete="CASCADE"), nullable=False, index=True)
+    order_item_id = Column(String, ForeignKey("order_items.id"), nullable=False, index=True)
+    product_id = Column(String, ForeignKey("products.id"), nullable=False)
+    quantity = Column(Integer, nullable=False)          # units returned
+    restock = Column(Boolean, nullable=False)           # sellable → put back in stock
+    amount = Column(Float, nullable=False, default=0)   # value of these units
+
+    order_return = relationship("OrderReturn", back_populates="items")
 
 
 class OrderItem(Base):

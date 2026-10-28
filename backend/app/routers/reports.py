@@ -48,6 +48,7 @@ def dashboard_summary(period: Period = "today", db: Session = Depends(get_db)):
         low_stock_count=low_stock,
         out_of_stock_count=out_of_stock,
         period_revenue=sales.total,
+        period_returns=revenue.returns_total(sales.lines),
         period_online_revenue=sales.total,
         period_b2b_sales=revenue.b2b_sales(db, start).total,
         period_other_income=other,

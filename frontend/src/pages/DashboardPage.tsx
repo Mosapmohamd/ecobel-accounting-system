@@ -70,6 +70,7 @@ export default function DashboardPage() {
               <div className="value">{money(summary.period_revenue)}</div>
               <div style={{ fontSize: 12, color: 'var(--ink-muted)', marginTop: 4 }}>
                 طلبات الموقع المكتملة والمدفوعة
+                {summary.period_returns > 0 && <> · بعد خصم مرتجعات {money(summary.period_returns)}</>}
                 {summary.period_other_income > 0 && <> · إيرادات أخرى {money(summary.period_other_income)}</>}
               </div>
             </div>

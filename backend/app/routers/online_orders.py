@@ -53,6 +53,10 @@ def update_order_status(
         return order
     if payload.status not in schemas.ORDER_TRANSITIONS[order.status]:
         raise HTTPException(409, "مينفعش الطلب يتنقل للحالة دي من حالته الحالية — يمكن حد تاني غيّرها، حدّث الصفحة")
+    if payload.status == models.OrderStatus.cancelled and db.query(models.OrderReturn.id).filter(models.OrderReturn.order_id == order.id).first():
+        # The returned units were already handled one by one (restocked or
+        # not, revenue reversed); cancelling would put them back again.
+        raise HTTPException(409, "الطلب ده عليه مرتجع مسجّل — سجّلي باقي القطع كمرتجع بدل إلغاء الطلب")
     previous = order.status
     restored: dict = {}
     by = f"(من الإدارة: {user.username})"

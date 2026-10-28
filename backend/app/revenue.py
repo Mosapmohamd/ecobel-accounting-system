@@ -33,6 +33,7 @@ from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 from . import cairo_time, models, order_ledger
+from .returns import RETURN_CATEGORY
 
 B2B_SALE_CATEGORY = "مبيعات جملة B2B"
 B2B_REVERSAL_CATEGORIES = ("تعديل أوردر جملة B2B", "إلغاء أوردر جملة B2B")
@@ -45,13 +46,15 @@ def _source():
 
 
 def _website_sale_entry():
-    """Entries that recognize or reverse a website order's revenue."""
+    """Entries that recognize or reverse a website order's revenue:
+    sale income, cancellation reversals and return reversals."""
     return and_(
         _source() == order_ledger.SOURCE,
         models.FinanceEntry.reference_id.isnot(None),
         or_(
             and_(models.FinanceEntry.type == models.FinanceEntryType.income, models.FinanceEntry.category == order_ledger.SALE_CATEGORY),
-            and_(models.FinanceEntry.type == models.FinanceEntryType.expense, models.FinanceEntry.category == order_ledger.REVERSAL_CATEGORY),
+            and_(models.FinanceEntry.type == models.FinanceEntryType.expense,
+                 models.FinanceEntry.category.in_((order_ledger.REVERSAL_CATEGORY, RETURN_CATEGORY))),
         ),
     )
 
@@ -87,6 +90,7 @@ class RevenueLine:
     reference_id: str
     amount: float
     at: datetime
+    kind: str = "sale"  # "sale" | "cancellation" | "return"
 
 
 @dataclass
@@ -108,7 +112,18 @@ def revenue_lines(db: Session, start: Optional[datetime] = None, end: Optional[d
         .filter(models.Order.status == models.OrderStatus.delivered)
         .filter(models.Order.payment_method == order_ledger.CASH_ON_DELIVERY)
     )
-    return [RevenueLine(e.reference_id, _signed(e), cairo_time.as_utc(e.entry_date)) for e in _in_range(q, start, end).all()]
+    return [RevenueLine(e.reference_id, _signed(e), cairo_time.as_utc(e.entry_date), _kind(e)) for e in _in_range(q, start, end).all()]
+
+
+def _kind(e: models.FinanceEntry) -> str:
+    if e.type == models.FinanceEntryType.income:
+        return "sale"
+    return "return" if e.category == RETURN_CATEGORY else "cancellation"
+
+
+def returns_total(lines: list[RevenueLine]) -> float:
+    """Revenue reversed by customer returns among `lines` (a positive amount)."""
+    return round(-sum(l.amount for l in lines if l.kind == "return"), 2)
 
 
 def revenue(db: Session, start: Optional[datetime] = None, end: Optional[datetime] = None) -> Totals:

@@ -133,6 +133,8 @@ export interface DashboardSummary {
   /** Sales revenue: completed AND paid website orders only (backend app/revenue.py). */
   period_revenue: number;
   period_online_revenue: number;
+  /** Revenue reversed by customer returns (already netted out of period_revenue). */
+  period_returns: number;
   /** Booked B2B sales — shown on their own, NOT part of period_revenue. */
   period_b2b_sales: number;
   /** Income entered manually — not sales. */
@@ -403,6 +405,65 @@ export interface OrderStatusChange {
   created_at: string;
 }
 
+/** Customer returns on a delivered order (backend app/returns.py). */
+export interface ReturnItemIn {
+  order_item_id: string;
+  quantity: number;
+  restock: boolean;
+}
+
+export interface ReturnIn {
+  items: ReturnItemIn[];
+  reason: string;
+  note?: string;
+  returned_on: string;
+}
+
+export interface ReturnPreview {
+  lines: { order_item_id: string; product_name: string; quantity: number; restock: boolean; amount: number }[];
+  units: number;
+  units_restocked: number;
+  merchandise_value: number;
+  /** What the ledger will reverse — 0 if the order's revenue was never recognized. */
+  revenue_reversed: number;
+  shipping_refunded: number;
+}
+
+export interface OrderReturn {
+  id: string;
+  reason: string;
+  note: string | null;
+  returned_on: string;
+  processed_by: string;
+  merchandise_value: number;
+  revenue_reversed: number;
+  created_at: string;
+  items: { order_item_id: string; product_id: string; quantity: number; restock: boolean; amount: number }[];
+}
+
+export interface OrderReturnsSummary {
+  order_id: string;
+  status: OnlineOrderStatus;
+  can_return: boolean;
+  reason_if_not: string | null;
+  lines: {
+    order_item_id: string;
+    product_id: string;
+    product_name: string;
+    ordered: number;
+    returned: number;
+    restocked: number;
+    returnable: number;
+    unit_value: number;
+  }[];
+  returns: OrderReturn[];
+  merchandise_total: number;
+  merchandise_returned: number;
+  revenue_reversed: number;
+  shipping_fee: number;
+  fully_returned: boolean;
+}
+
 export const onlineOrdersApi = {
   list: (status?: OnlineOrderStatus) =>
     api.get<OnlineOrder[]>('/online-orders/', { params: status ? { status } : undefined }).then((r) => r.data),
@@ -410,6 +471,12 @@ export const onlineOrdersApi = {
     api.patch<OnlineOrder>(`/online-orders/${id}/status`, { status }).then((r) => r.data),
   statusHistory: (id: string) =>
     api.get<OrderStatusChange[]>(`/online-orders/${id}/status-history`).then((r) => r.data),
+  returns: (id: string) => api.get<OrderReturnsSummary>(`/online-orders/${id}/returns`).then((r) => r.data),
+  previewReturn: (id: string, payload: ReturnIn) =>
+    api.post<ReturnPreview>(`/online-orders/${id}/returns/preview`, payload).then((r) => r.data),
+  /** `request_id` stays the same when the same submission is retried. */
+  createReturn: (id: string, payload: ReturnIn & { request_id: string }) =>
+    api.post<OrderReturn>(`/online-orders/${id}/returns`, payload).then((r) => r.data),
 };
 
 // ---------------- Unified sales analytics ----------------
@@ -433,6 +500,10 @@ export interface SalesAnalytics {
   total_orders: number;
   /** Booked B2B sales — NOT part of total_revenue. */
   b2b_sales: number;
+  /** Reversed by customer returns (already netted out of total_revenue). */
+  returns_total: number;
+  partially_returned_orders: number;
+  fully_returned_orders: number;
   orders_by_status: Record<string, number>;
   revenue_last_30_days: RevenuePoint[];
   top_products: TopProduct[];

@@ -57,13 +57,52 @@ is recorded in `order_status_changes` (from → to, staff username, time,
 revenue recognized/reversed, units restored) — schema change
 `docs/schema-changes/2026-10-27_order_status_changes.sql` (applied 2026-10-27).
 
-**Delivered → cancelled** (refused or returned after delivery): the recognized
-revenue is reversed with one «إلغاء طلب موقع» entry (the income entry stays),
-the stock the order still holds is given back (the goods are assumed to be
-back in stock — the same policy as cancelling a shipped order), and the coupon
-and offer uses are released. Each happens once: the order row is locked, a
-cancelled order can't change again, and the ledger functions only move what's
-still recognized/held.
+**Delivered → cancelled** (the whole order refused or sent back): the
+recognized revenue is reversed with one «إلغاء طلب موقع» entry (the income
+entry stays), all the stock the order still holds is given back, and the
+coupon and offer uses are released. Each happens once: the order row is
+locked, a cancelled order can't change again, and the ledger functions only
+move what's still recognized/held. When only some items came back, or some
+came back damaged, record a **return** instead (below). An order with a
+recorded return can't be cancelled (409) — its returned units were already
+handled one by one.
+
+## Returns (accounting → طلبات الموقع → التفاصيل → تسجيل مرتجع)
+
+A return is recorded against a **delivered** order, per order line: units
+returned, and whether they're sellable (back to stock) or not (damaged). The
+order stays «تم التوصيل». Code: `backend/app/returns.py`,
+`backend/app/routers/order_returns.py`; schema change
+`docs/schema-changes/2026-10-28_order_returns.sql`.
+
+- **Quantities:** never more than ordered minus already returned, per line.
+- **Stock:** only the units marked sellable go back — one `customer_return`
+  inventory movement per product (reference = the order). Damaged units
+  don't; nothing beyond what was returned does.
+- **Money:** a returned unit is worth what the customer paid for it — the
+  line price, minus the offer discount allocated to that product at checkout
+  (`order_promotions.details.allocations`; older orders without allocations:
+  spread by value), minus the coupon spread over the lines by their value
+  after offers. The value of everything returned so far is rounded once, so
+  returning every unit reverses exactly the merchandise total (to the cent).
+- **Shipping is not refunded** by a return (it stays recognized revenue).
+- **Revenue:** if the order's revenue was recognized (delivered + cash on
+  delivery), the returned value is reversed with one expense entry
+  «مرتجع طلب موقع» (source `website`, reference = the order) — a revenue
+  reversal, not an operating expense; the sale entry stays. An order never
+  recognized (another payment method) reverses nothing; its stock is still
+  handled. Restocking never touches revenue.
+- **Reports:** revenue is net of returns. The dashboard shows the period's
+  returns (`period_returns`); sales analytics shows the returns total and how
+  many recognized orders were partly / fully returned. Cancellations
+  («إلغاء طلب موقع») and returns («مرتجع طلب موقع») stay distinguishable.
+- **Once only:** each submission carries a `request_id` (unique) — a retry
+  returns the return already recorded; the order row lock serializes returns
+  on one order (verified on PostgreSQL 17: 8 simultaneous returns of the same
+  last units → one recorded; 6 retries of one submission → one recorded).
+- **Audit:** who processed it, when, the date the goods came back, reason,
+  note, per-line units/restock/value, merchandise value and revenue reversed.
+  The admin reviews quantities and money before confirming.
 
 ## How it's recorded (`backend/app/order_ledger.py`, identical in both repos)
 
@@ -88,8 +127,7 @@ order (like checkout). Never deducted → nothing comes back; already given back
 order can't be cancelled again. Verified under concurrent requests on
 PostgreSQL 17 (duplicate cancellations racing checkouts).
 
-There are no returns, refunds or partial cancellations in the system: an order
-is either kept whole or cancelled whole.
+Partial returns aren't cancellations: they're recorded as returns (above).
 
 ## Older orders (booked at checkout before this rule)
 
@@ -113,10 +151,10 @@ Orders placed before this change had their total booked as income at checkout.
    real payment status needs a schema change.
 3. **Shipping** is included in recognized revenue (`total_amount`) — the
    approved rule.
-4. **Returns/refunds** aren't represented beyond cancelling the whole order:
-   a partial return of a delivered order can't be recorded, and cancelling a
-   delivered order always restocks everything it held (a damaged/unsellable
-   return would need a manual stock adjustment afterwards).
+4. **Returns:** shipping is never refunded by a return, and the reversal is
+   dated when the return is recorded (the goods' return date is kept on the
+   return). Cash actually paid back to customers isn't tracked (no payment
+   ledger) — the reversal is revenue, not a cash movement.
 5. **Customer cancellations** (website, pending orders only) aren't written
    to `order_status_changes` — only staff changes are; their ledger and
    inventory notes still record them.

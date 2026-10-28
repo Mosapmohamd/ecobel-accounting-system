@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState } from 'react';
 import { onlineOrdersApi, type OnlineOrder, type OnlineOrderStatus, type OrderStatusChange } from '../lib/api';
 import { useConfirm } from '../lib/useConfirm';
 import { useToast } from '../lib/toast';
+import { OrderReturnsPanel } from '../components/OrderReturns';
 
 const statusLabel: Record<OnlineOrderStatus, string> = {
   pending: 'قيد التجهيز',
@@ -19,7 +20,7 @@ function changeMessage(from: OnlineOrderStatus, to: OnlineOrderStatus): string {
   if (to === 'delivered')
     return 'الدفع عند الاستلام: التوصيل معناه إن المبلغ اتحصّل، فإيراد الطلب هيتسجل. بعد كده الحالة الوحيدة المسموحة هي الإلغاء.';
   if (from === 'delivered')
-    return 'الطلب اتسلّم قبل كده: هيتسجل قيد عكس لإيراده (القيد الأصلي بيفضل في السجل)، والكميات هترجع للمخزون على أساس إن البضاعة رجعت، والكوبون (لو موجود) هيرجع متاح. الإلغاء نهائي.';
+    return 'الطلب اتسلّم قبل كده: هيتسجل قيد عكس لإيراده كله (القيد الأصلي بيفضل في السجل)، وكل كمياته هترجع للمخزون، والكوبون (لو موجود) هيرجع متاح. لو العميلة رجّعت قطع بس (أو فيه قطع تالفة)، استخدمي «تسجيل مرتجع» من التفاصيل بدل الإلغاء. الإلغاء نهائي.';
   return 'الكميات هترجع للمخزون، والكوبون (لو موجود) هيرجع متاح، ولو كان اتسجل إيراد هيتعكس. الإلغاء نهائي.';
 }
 
@@ -223,6 +224,7 @@ export default function OnlineOrdersPage() {
                               )).join('، ')}
                             </div>
                           )}
+                          {o.status === 'delivered' && <OrderReturnsPanel order={o} onChanged={load} />}
                           <div style={{ fontSize: 12.5, marginTop: 10 }}>
                             <strong>سجل تغيير الحالة:</strong>{' '}
                             {history[o.id] === undefined ? (

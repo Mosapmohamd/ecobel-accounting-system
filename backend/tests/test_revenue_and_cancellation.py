@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from app import auth, models, order_ledger, revenue, services
+from app import auth, models, order_ledger, returns, revenue, services
 from app.database import SessionLocal
 from app.main import app
 
@@ -187,7 +187,7 @@ def test_reports_use_the_same_revenue_and_keep_other_income_and_expenses_apart()
     db = SessionLocal()
     expenses = db.query(models.FinanceEntry).filter_by(type=models.FinanceEntryType.expense).all()
     reversals = sum(e.amount for e in expenses if e.reference_id and (
-        (e.source == "website" and e.category == order_ledger.REVERSAL_CATEGORY)
+        (e.source == "website" and e.category in (order_ledger.REVERSAL_CATEGORY, returns.RETURN_CATEGORY))
         or (e.source == "b2b" and e.category in revenue.B2B_REVERSAL_CATEGORIES)))
     assert reversals > 0 and revenue.operating_expenses(db) == round(sum(e.amount for e in expenses) - reversals, 2)
     db.close()

@@ -302,6 +302,7 @@ class DashboardSummary(BaseModel):
     # Sales revenue = completed AND paid orders (app/revenue.py).
     period_revenue: float = 0
     period_online_revenue: float = 0
+    period_returns: float = 0          # revenue reversed by customer returns (already netted out of period_revenue)
     period_b2b_sales: float           # B2B part of period_revenue
     period_other_income: float = 0    # manual income entries (not sales)
     period_income: float              # period_revenue + period_other_income
@@ -441,6 +442,97 @@ class OrderStatusChangeOut(BaseModel):
     created_at: datetime
 
 
+# ---------------- Online store: customer returns ----------------
+class ReturnItemIn(BaseModel):
+    order_item_id: str
+    quantity: int = Field(ge=1, le=10000)
+    restock: bool
+
+
+class ReturnIn(BaseModel):
+    items: List[ReturnItemIn] = Field(min_length=1, max_length=200)
+    reason: str = Field(min_length=1, max_length=200)
+    note: Optional[str] = Field(default=None, max_length=1000)
+    returned_on: date
+
+    @field_validator("reason")
+    @classmethod
+    def _reason_not_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("اكتبي سبب المرتجع")
+        return v
+
+
+class ReturnCreate(ReturnIn):
+    # generated once per submission by the admin page (retries reuse it)
+    request_id: str = Field(min_length=8, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
+
+
+class ReturnPreviewLine(BaseModel):
+    order_item_id: str
+    product_name: str
+    quantity: int
+    restock: bool
+    amount: float
+
+
+class ReturnPreview(BaseModel):
+    lines: List[ReturnPreviewLine]
+    units: int
+    units_restocked: int
+    merchandise_value: float
+    revenue_reversed: float
+    shipping_refunded: float = 0  # shipping is never refunded by a return
+
+
+class ReturnItemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    order_item_id: str
+    product_id: str
+    quantity: int
+    restock: bool
+    amount: float
+
+
+class OrderReturnOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    reason: str
+    note: Optional[str]
+    returned_on: date
+    processed_by: str
+    merchandise_value: float
+    revenue_reversed: float
+    created_at: datetime
+    items: List[ReturnItemOut]
+
+
+class ReturnableLine(BaseModel):
+    order_item_id: str
+    product_id: str
+    product_name: str
+    ordered: int
+    returned: int
+    restocked: int
+    returnable: int
+    unit_value: float  # what one unit is worth back (after offers and coupon)
+
+
+class OrderReturnsSummary(BaseModel):
+    order_id: str
+    status: OrderStatus
+    can_return: bool
+    reason_if_not: Optional[str] = None
+    lines: List[ReturnableLine]
+    returns: List[OrderReturnOut]
+    merchandise_total: float
+    merchandise_returned: float
+    revenue_reversed: float
+    shipping_fee: float
+    fully_returned: bool
+
+
 # ---------------- Online store: sales analytics ----------------
 class RevenuePoint(BaseModel):
     date: str
@@ -458,6 +550,9 @@ class SalesAnalytics(BaseModel):
     total_revenue: float              # recognized: completed + paid website orders
     total_orders: int                 # orders behind total_revenue
     b2b_sales: float = 0              # booked B2B sales — NOT part of total_revenue
+    returns_total: float = 0          # reversed by customer returns (already netted out of total_revenue)
+    partially_returned_orders: int = 0
+    fully_returned_orders: int = 0
     orders_by_status: dict[str, int]
     revenue_last_30_days: List[RevenuePoint]
     top_products: List[TopProduct]
