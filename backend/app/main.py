@@ -13,7 +13,7 @@ from .database import check_schema_matches_models
 from .routers import (
     auth_router, categories, products, inventory, b2b, free_distribution,
     finance, reports, coupons, online_orders, web_analytics, offers, routines,
-    shipping_rates, report_exports, reviews, merchandising, promotions, order_returns,
+    shipping_rates, report_exports, reviews, merchandising, promotions, order_returns, integrations,
 )
 from .routers.auth_router import limiter
 
@@ -73,6 +73,7 @@ app.include_router(shipping_rates.router)
 app.include_router(report_exports.router)
 app.include_router(reviews.router)
 app.include_router(merchandising.router)
+app.include_router(integrations.router)
 
 
 @app.get("/")
