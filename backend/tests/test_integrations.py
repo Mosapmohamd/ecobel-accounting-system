@@ -16,7 +16,7 @@ client = TestClient(app)
 H = {"Authorization": f"Bearer {auth.create_access_token({'sub': 'int_staff'})}"}
 GOOD_CSP = ("default-src 'self'; script-src 'self' 'unsafe-inline' https://connect.facebook.net; "
             "img-src 'self' data: https://www.facebook.com; connect-src 'self' https://api.example https://www.facebook.com")
-PAGE = '<html><noscript><img src="https://www.facebook.com/tr?id=1234567890123&ev=PageView&noscript=1"/></noscript></html>'
+PAGE = '<html><head><meta name="ecobel-meta-pixel" content="1234567890123" data-consent="opt-in"/></head><body></body></html>'
 
 
 def page(body=PAGE, csp=GOOD_CSP, status=200, location=None):
@@ -55,6 +55,15 @@ def test_pixel_on_and_a_tight_csp_pass():
     r = integrations.check_storefront("https://shop.example/", fetcher=page())
     assert r["pixel_id"] == "1234567890123"
     assert set(by_name(r).values()) == {"ok"}
+
+
+def test_consent_mode_and_beacons_that_bypass_consent_are_checked():
+    no_optin = '<html><head><meta name="ecobel-meta-pixel" content="1234567890123"/></head></html>'
+    assert by_name(integrations.check_storefront("https://shop.example/", fetcher=page(body=no_optin)))["موافقة الزائرة"] == "fail"
+    beacon = PAGE + '<noscript><img src="https://www.facebook.com/tr?id=1234567890123&ev=PageView&noscript=1"/></noscript>'
+    assert by_name(integrations.check_storefront("https://shop.example/", fetcher=page(body=beacon)))["مفيش إرسال من غير موافقة"] == "fail"
+    r = integrations.check_storefront("https://shop.example/", fetcher=page())
+    assert by_name(r)["موافقة الزائرة"] == "ok" and "مفيش إرسال من غير موافقة" not in by_name(r)
 
 
 def test_pixel_off_is_reported_as_off_not_as_an_error():

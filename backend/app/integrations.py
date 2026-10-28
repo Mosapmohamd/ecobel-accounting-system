@@ -4,7 +4,9 @@ Meta Pixel from here — and nothing more. See docs/INTEGRATIONS.md.
 Measured here:
 - the live storefront's Pixel setup, by fetching its homepage on demand
   (STOREFRONT_URL, server config only — never a URL from the request): the
-  Pixel ID it serves (its <noscript> beacon) and whether its
+  Pixel ID it serves and its consent mode (the storefront's public marker
+  <meta name="ecobel-meta-pixel" content="<id>" data-consent="opt-in">), that
+  no Meta beacon is sent without consent, and whether its
   Content-Security-Policy lets the Pixel run, without opening more than needed;
 - the orders that qualify for a Purchase event (completed AND paid: delivered,
   cash on delivery — app/order_ledger.py), from this database.
@@ -124,7 +126,9 @@ def check_storefront(url: Optional[str], fetcher: Optional[Callable[[str], Fetch
         return {"checked_at": checked_at, "url": url, "reachable": True, "pixel_id": None, "checks": checks}
     add("الوصول للمتجر", "ok", "المتجر رد بـ HTTP 200.")
 
-    ids = sorted(set(re.findall(r"facebook\.com/tr\?id=(\d{6,20})", page.body)))
+    markers = re.findall(r'<meta[^>]*name="ecobel-meta-pixel"[^>]*>', page.body)
+    ids = sorted({m.group(1) for tag in markers if (m := re.search(r' content="(\d{6,20})"', tag))})
+    consent_modes = {m.group(1) for tag in markers if (m := re.search(r' data-consent="([a-z-]+)"', tag))}
     pixel_id = ids[0] if len(ids) == 1 else None
     if not ids:
         add("Meta Pixel على المتجر", "info", "المتجر مش شغّال عليه Pixel (NEXT_PUBLIC_META_PIXEL_ID فاضي) — مفيش تتبع.")
@@ -132,6 +136,13 @@ def check_storefront(url: Optional[str], fetcher: Optional[Callable[[str], Fetch
         add("Meta Pixel على المتجر", "warn", f"أكتر من Pixel ID في الصفحة: {', '.join(ids)}.")
     else:
         add("Meta Pixel على المتجر", "ok", f"المتجر شغّال عليه Pixel ID {pixel_id}.")
+    if ids:
+        if consent_modes == {"opt-in"}:
+            add("موافقة الزائرة", "ok", "التتبع مقفول لحد ما الزائرة توافق (opt-in) — من غير موافقة مفيش أي حاجة بتتبعت لـ Meta.")
+        else:
+            add("موافقة الزائرة", "fail", "المتجر مش معلن إن التتبع بيستنى موافقة الزائرة (opt-in).")
+    if re.search(r"facebook\.com/tr\?", page.body):
+        add("مفيش إرسال من غير موافقة", "fail", "في صورة تتبع لـ Meta جوه الصفحة نفسها (noscript) — بتتبعت من غير موافقة.")
 
     csp = _csp(page.headers.get("content-security-policy", ""))
     if not csp:

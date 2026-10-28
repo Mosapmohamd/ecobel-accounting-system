@@ -17,7 +17,8 @@ orders + status audit (this DB) ──► "orders that qualify for Purchase"
 
 | Shown on the page | Source | Reliable? |
 |---|---|---|
-| Pixel on/off + the Pixel ID the live storefront serves | fetch of `STOREFRONT_URL` (its `<noscript>` beacon) | yes — what the deployed storefront actually serves |
+| Pixel on/off, the Pixel ID the live storefront serves, consent mode | fetch of `STOREFRONT_URL` (its public `<meta name="ecobel-meta-pixel" content="<id>" data-consent="opt-in">` marker) | yes — what the deployed storefront actually serves |
+| No Meta beacon sent without consent | the same page (no `facebook.com/tr?` image in the HTML) | yes |
 | CSP lets the Pixel run, and nothing broader | the same response's `Content-Security-Policy` | yes |
 | Orders that qualify for Purchase (7 / 30 days, value, last delivery) | `orders` (delivered + cash on delivery) and `order_status_changes` (delivery time) | yes — the server-side truth of which orders are completed and paid |
 | Events sent by browsers (counts, last time) | — | **not measured**: browsers send straight to Meta |
@@ -33,7 +34,8 @@ memory only (it's a live probe, not a history) — after a restart the page says
 `POST /integrations/meta-pixel/check` fetches **only** `STOREFRONT_URL`
 (server configuration; the request can't choose a URL), once, with an 8 s
 timeout, at most 2 MB, and **never follows redirects** (it reports them). It
-sends nothing to Meta. Results: reachable, Pixel ID(s) found, CSP allows
+sends nothing to Meta. Results: reachable, Pixel ID(s) found, consent mode
+is opt-in, no beacon that would send without consent, CSP allows
 `script-src https://connect.facebook.net` + `connect-src`/`img-src
 https://www.facebook.com` when the Pixel is on, and no wildcard/scheme-wide
 sources (`*`, `https:`, `*.facebook.*`).
