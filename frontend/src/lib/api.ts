@@ -748,3 +748,43 @@ export const announcementBarApi = {
   save: (payload: AnnouncementBarSettings) =>
     api.put<AnnouncementBarSettings>('/merchandising/announcement-bar', payload).then((r) => r.data),
 };
+
+// ---------------- Settings → Integrations (backend app/integrations.py) ----------------
+export interface IntegrationCheck {
+  name: string;
+  status: 'ok' | 'warn' | 'fail' | 'info';
+  detail: string;
+}
+
+export interface StorefrontCheck {
+  checked_at: string;
+  url: string | null;
+  reachable: boolean;
+  /** The Pixel ID the live storefront serves (null = none). */
+  pixel_id: string | null;
+  checks: IntegrationCheck[];
+}
+
+export interface MetaPixelStatus {
+  storefront_url: string | null;
+  /** Kept in the server's memory only — null after a restart. */
+  last_check: StorefrontCheck | null;
+  events: { name: string; trigger: string; server_side_data: boolean }[];
+  purchase_eligible: {
+    last_7_days: { orders: number; value: number };
+    last_30_days: { orders: number; value: number };
+    all_time: { orders: number; value: number };
+    last_delivered_at: string | null;
+    undated: number;
+  };
+  /** Always false: browser events go straight to Meta. */
+  browser_events_measured: boolean;
+  /** Always false: needs a Meta API token (none configured). */
+  meta_received_measured: boolean;
+  events_manager_url: string;
+}
+
+export const integrationsApi = {
+  metaPixel: () => api.get<MetaPixelStatus>('/integrations/meta-pixel').then((r) => r.data),
+  checkMetaPixel: () => api.post<StorefrontCheck>('/integrations/meta-pixel/check').then((r) => r.data),
+};

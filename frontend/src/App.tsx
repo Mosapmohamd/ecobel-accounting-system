@@ -10,6 +10,7 @@ import FreeDistributionPage from './pages/FreeDistributionPage';
 import FinancePage from './pages/FinancePage';
 import CouponsPage from './pages/CouponsPage';
 import OnlineOrdersPage from './pages/OnlineOrdersPage';
+import IntegrationsPage from './pages/IntegrationsPage';
 import SalesAnalyticsPage from './pages/SalesAnalyticsPage';
 import OffersPage from './pages/OffersPage';
 import RoutinesPage from './pages/RoutinesPage';
@@ -52,6 +53,7 @@ function AppRoutes() {
         <Route path="reports" element={<ReportsPage />} />
         <Route path="reviews" element={<ReviewsPage />} />
         <Route path="merchandising" element={<MerchandisingPage />} />
+        <Route path="settings/integrations" element={<IntegrationsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

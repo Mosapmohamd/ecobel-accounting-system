@@ -533,6 +533,50 @@ class OrderReturnsSummary(BaseModel):
     fully_returned: bool
 
 
+# ---------------- Settings: integrations (app/integrations.py) ----------------
+class IntegrationCheck(BaseModel):
+    name: str
+    status: Literal["ok", "warn", "fail", "info"]
+    detail: str
+
+
+class StorefrontCheck(BaseModel):
+    checked_at: datetime
+    url: Optional[str]
+    reachable: bool
+    pixel_id: Optional[str]           # the Pixel ID the live storefront serves
+    checks: List[IntegrationCheck]
+
+
+class PixelEvent(BaseModel):
+    name: str
+    trigger: str
+    server_side_data: bool            # True: this backend can see which orders qualify
+
+
+class EligibleWindow(BaseModel):
+    orders: int
+    value: float
+
+
+class PurchaseEligible(BaseModel):
+    last_7_days: EligibleWindow
+    last_30_days: EligibleWindow
+    all_time: EligibleWindow
+    last_delivered_at: Optional[datetime]
+    undated: int                      # delivered before the status audit existed (dated by last update)
+
+
+class MetaPixelStatus(BaseModel):
+    storefront_url: Optional[str]
+    last_check: Optional[StorefrontCheck]   # in memory only; None after a restart
+    events: List[PixelEvent]
+    purchase_eligible: PurchaseEligible
+    browser_events_measured: bool     # always False: browser events go straight to Meta
+    meta_received_measured: bool      # always False: needs a Meta API token (none configured)
+    events_manager_url: str
+
+
 # ---------------- Online store: sales analytics ----------------
 class RevenuePoint(BaseModel):
     date: str

@@ -34,6 +34,10 @@ const navItems = [
       { to: '/sales-analytics', label: 'تحليلات المبيعات', icon: ChartIcon },
     ],
   },
+  {
+    group: 'الإعدادات',
+    items: [{ to: '/settings/integrations', label: 'التكاملات', icon: PlugIcon }],
+  },
 ];
 
 export default function Layout() {
@@ -133,6 +137,13 @@ function TagIcon() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="m20.59 13.41-7.17 7.17a2 2 0 0 1-2.83 0L3 13V3h10l7.59 7.59a2 2 0 0 1 0 2.82Z" />
       <circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+function PlugIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0V8zM12 18v4" />
     </svg>
   );
 }
