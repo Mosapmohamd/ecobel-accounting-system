@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { couponsApi, type Coupon, type CouponDiscountType, type CouponLimitType } from '../lib/api';
+import { apiErrorMessage, couponsApi, type Coupon, type CouponDiscountType, type CouponLimitType } from '../lib/api';
 import { useConfirm } from '../lib/useConfirm';
 
 export default function CouponsPage() {
@@ -42,8 +42,7 @@ export default function CouponsPage() {
       setShowNew(false);
       load();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setError(msg || 'تعذر إضافة الكوبون');
+      setError(apiErrorMessage(err, 'تعذر إضافة الكوبون'));
     } finally {
       setSaving(false);
     }

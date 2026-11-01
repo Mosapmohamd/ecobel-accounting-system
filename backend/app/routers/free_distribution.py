@@ -23,6 +23,14 @@ def create_distribution(payload: schemas.FreeDistributionCreate, db: Session = D
     if not payload.items:
         raise HTTPException(400, "لازم منتج واحد على الأقل في التوزيع")
 
+    # Lock every product first, in id order (like checkout, so two requests
+    # can't deadlock), and read their stock as it is now.
+    ids = sorted({item.product_id for item in payload.items})
+    products = {
+        p.id: p for p in db.query(models.Product).filter(models.Product.id.in_(ids))
+        .order_by(models.Product.id).with_for_update().populate_existing()
+    }
+
     distribution = models.FreeDistribution(
         recipient_name=payload.recipient_name,
         recipient_type=payload.recipient_type,
@@ -32,7 +40,7 @@ def create_distribution(payload: schemas.FreeDistributionCreate, db: Session = D
     db.flush()
 
     for item_in in payload.items:
-        product = db.get(models.Product, item_in.product_id)
+        product = products.get(item_in.product_id)
         if not product:
             raise HTTPException(404, f"منتج غير موجود: {item_in.product_id}")
         if item_in.quantity <= 0:

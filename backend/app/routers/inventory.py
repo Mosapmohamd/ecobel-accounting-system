@@ -13,7 +13,12 @@ def adjust_stock(payload: schemas.StockAdjustment, db: Session = Depends(get_db)
     """Manual stock adjustment: positive quantity_change = restock,
     negative = correction/damage/loss. Always allowed to go negative here
     since it's an explicit manual override (e.g. fixing a count error)."""
-    product = db.get(models.Product, payload.product_id)
+    # Row lock (held until commit) and the stock as it is now: a website
+    # checkout deducting at the same moment can't be overwritten.
+    product = (
+        db.query(models.Product).filter(models.Product.id == payload.product_id)
+        .with_for_update().populate_existing().one_or_none()
+    )
     if not product:
         raise HTTPException(404, "المنتج غير موجود")
 

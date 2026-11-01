@@ -121,6 +121,15 @@ def create_order(payload: schemas.B2BOrderCreate, db: Session = Depends(get_db))
         raise HTTPException(404, "العميل غير موجود")
     if not payload.items:
         raise HTTPException(400, "الأوردر لازم يحتوي على منتج واحد على الأقل")
+    # Same line rules as editing (update_order): one line per product, and
+    # no archived product — an edit could otherwise move the wrong stock.
+    if len({item.product_id for item in payload.items}) != len(payload.items):
+        raise HTTPException(400, "نفس المنتج متكرر في الأوردر — اجمع الكمية في سطر واحد")
+    products = _locked_products(db, [item.product_id for item in payload.items])
+    for item_in in payload.items:
+        product = products.get(item_in.product_id)
+        if product is not None and not product.is_active:
+            raise HTTPException(400, f"«{product.name}» مؤرشف — مينفعش تزوّد كميته أو تضيفه لأوردر")
 
     order = models.B2BOrder(
         customer_id=customer.id, note=payload.note, total_amount=0,
@@ -136,7 +145,7 @@ def create_order(payload: schemas.B2BOrderCreate, db: Session = Depends(get_db))
 
     total = 0.0
     for item_in in payload.items:
-        product = db.get(models.Product, item_in.product_id)
+        product = products.get(item_in.product_id)
         if not product:
             raise HTTPException(404, f"منتج غير موجود: {item_in.product_id}")
         if item_in.quantity <= 0:
@@ -196,9 +205,13 @@ def _locked_order(db: Session, order_id: str) -> models.B2BOrder:
 
 def _locked_products(db: Session, product_ids) -> dict[str, models.Product]:
     """Products about to have their stock changed, locked in id order (a
-    fixed order, so two requests can't deadlock each other)."""
+    fixed order, so two requests can't deadlock each other), with their
+    stock as it is once the lock is held."""
     ids = sorted(set(product_ids))
-    rows = db.query(models.Product).filter(models.Product.id.in_(ids)).order_by(models.Product.id).with_for_update().all()
+    rows = (
+        db.query(models.Product).filter(models.Product.id.in_(ids)).order_by(models.Product.id)
+        .with_for_update().populate_existing().all()
+    )
     return {p.id: p for p in rows}
 
 

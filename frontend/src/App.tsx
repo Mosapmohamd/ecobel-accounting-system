@@ -5,6 +5,7 @@ import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import ProductsPage from './pages/ProductsPage';
+import CategoriesPage from './pages/CategoriesPage';
 import B2BPage from './pages/B2BPage';
 import FreeDistributionPage from './pages/FreeDistributionPage';
 import FinancePage from './pages/FinancePage';
@@ -39,6 +40,7 @@ function AppRoutes() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="products" element={<ProductsPage />} />
+        <Route path="categories" element={<CategoriesPage />} />
         <Route path="b2b" element={<B2BPage />} />
         <Route path="free-distribution" element={<FreeDistributionPage />} />
         <Route path="finance" element={<FinancePage />} />

@@ -37,6 +37,12 @@ from .returns import RETURN_CATEGORY
 
 B2B_SALE_CATEGORY = "مبيعات جملة B2B"
 B2B_REVERSAL_CATEGORIES = ("تعديل أوردر جملة B2B", "إلغاء أوردر جملة B2B")
+# Categories only the automatic order entries use — manual entries can't
+# (app/routers/finance.py), so the two kinds never look alike.
+AUTOMATIC_CATEGORIES = frozenset({
+    order_ledger.SALE_CATEGORY, order_ledger.REVERSAL_CATEGORY, RETURN_CATEGORY,
+    B2B_SALE_CATEGORY, *B2B_REVERSAL_CATEGORIES,
+})
 
 
 # ---------------------------------------------------------------- entry classes

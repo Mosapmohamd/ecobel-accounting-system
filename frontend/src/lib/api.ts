@@ -27,10 +27,9 @@ api.interceptors.response.use(
 );
 
 /** The backend's own (Arabic) reason for a failed request, or `fallback`. */
-export function apiErrorMessage(err: unknown, fallback: string): string {
-  const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
-  return typeof detail === 'string' ? detail : fallback;
-}
+// Our own messages as they are, request-validation (422) lists as "field:
+// reason" lines, anything else the fallback (lib/apiError.ts).
+export { apiErrorMessage } from './apiError';
 
 // ---------------- Types ----------------
 export type StockStatus = 'ok' | 'low' | 'out';
@@ -39,6 +38,9 @@ export interface Category {
   id: string;
   name: string;
   created_at: string;
+  /** Active products (what the storefront shows on the category). */
+  product_count: number;
+  archived_product_count: number;
 }
 
 export interface Product {
@@ -121,6 +123,8 @@ export interface FinanceEntry {
   reference_id: string | null;
   source: FinanceSource | null;
   entry_date: string;
+  /** Entered by staff — automatic order entries point at their order. */
+  is_manual: boolean;
 }
 
 export type DashboardPeriod = 'today' | 'month' | 'quarter' | 'year';
@@ -176,7 +180,11 @@ export async function login(username: string, password: string) {
 // ---------------- Categories ----------------
 export const categoriesApi = {
   list: () => api.get<Category[]>('/categories/').then((r) => r.data),
+  get: (id: string) => api.get<Category>(`/categories/${id}`).then((r) => r.data),
   create: (name: string) => api.post<Category>('/categories/', { name }).then((r) => r.data),
+  rename: (id: string, name: string) => api.patch<Category>(`/categories/${id}`, { name }).then((r) => r.data),
+  /** 409 with the reason when products or offers still use the category. */
+  remove: (id: string) => api.delete(`/categories/${id}`),
 };
 
 // ---------------- Products ----------------

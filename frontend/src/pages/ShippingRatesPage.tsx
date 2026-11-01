@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { shippingRatesApi, type ShippingRate } from '../lib/api';
+import { apiErrorMessage, shippingRatesApi, type ShippingRate } from '../lib/api';
 import { useConfirm } from '../lib/useConfirm';
 
 export default function ShippingRatesPage() {
@@ -26,8 +26,7 @@ export default function ShippingRatesPage() {
       setCity(''); setFee('');
       load();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setError(msg || 'تعذر إضافة سعر الشحن');
+      setError(apiErrorMessage(err, 'تعذر إضافة سعر الشحن'));
     } finally {
       setSaving(false);
     }

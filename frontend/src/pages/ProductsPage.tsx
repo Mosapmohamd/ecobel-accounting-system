@@ -427,8 +427,8 @@ function AdjustStockModal({
     try {
       await inventoryApi.adjust({ product_id: product.id, quantity_change: value, note });
       onAdjusted();
-    } catch {
-      setError('حصل خطأ أثناء تسوية المخزون');
+    } catch (err) {
+      setError(apiErrorMessage(err, 'حصل خطأ أثناء تسوية المخزون'));
     } finally {
       setSaving(false);
     }

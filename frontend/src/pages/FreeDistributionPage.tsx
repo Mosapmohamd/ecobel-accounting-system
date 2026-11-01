@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { freeDistributionApi, productsApi, type FreeDistribution, type Product, type RecipientType } from '../lib/api';
+import { apiErrorMessage, freeDistributionApi, productsApi, type FreeDistribution, type Product, type RecipientType } from '../lib/api';
 import Modal from '../components/Modal';
 
 const typeLabel: Record<RecipientType, string> = {
@@ -91,8 +91,8 @@ function NewDistributionModal({ onClose, onCreated }: { onClose: () => void; onC
         items: [{ product_id: productId, quantity: qty }],
       });
       onCreated();
-    } catch (err: any) {
-      setError(err?.response?.data?.detail || 'حصل خطأ أثناء التسجيل');
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err, 'حصل خطأ أثناء التسجيل'));
     } finally {
       setSaving(false);
     }

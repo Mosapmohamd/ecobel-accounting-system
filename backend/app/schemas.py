@@ -8,9 +8,63 @@ from . import cairo_time
 from .models import MovementType, RecipientType, FinanceEntryType, CouponDiscountType, OrderStatus
 
 
+# ---------------- Shared input checks ----------------
+def _not_null(v):
+    """PATCH bodies: leaving a field out keeps its value; sending null for a
+    field that can't be empty is an error (422) instead of a database error
+    or a stored NULL that later reads fail on."""
+    if v is None:
+        raise ValueError("الحقل ده مطلوب ومينفعش يبقى فاضي")
+    return v
+
+
+def _required_text(message: str, max_length: int = 200):
+    """Trimmed text that can't be blank (None passes — required-ness is the
+    field's own business)."""
+    def check(v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        v = v.strip()
+        if not v:
+            raise ValueError(message)
+        if len(v) > max_length:
+            raise ValueError(f"الحد الأقصى {max_length} حرف")
+        return v
+    return check
+
+
+def _distinct_products(v: Optional[List[str]]) -> Optional[List[str]]:
+    if v is not None and len(set(v)) != len(v):
+        raise ValueError("نفس المنتج متكرر — كل منتج مرة واحدة")
+    return v
+
+
 # ---------------- Categories ----------------
+CATEGORY_NAME_MAX = 100
+
+
+def _category_name(v: Optional[str]) -> Optional[str]:
+    """Trimmed, inner spaces collapsed, not blank, at most 100 characters."""
+    if v is None:
+        return v
+    v = " ".join(v.split())
+    if not v:
+        raise ValueError("اسم الفئة مطلوب")
+    if len(v) > CATEGORY_NAME_MAX:
+        raise ValueError(f"اسم الفئة طويل — الحد الأقصى {CATEGORY_NAME_MAX} حرف")
+    return v
+
+
 class CategoryCreate(BaseModel):
     name: str
+
+    _name = field_validator("name")(classmethod(lambda cls, v: _category_name(v)))
+
+
+class CategoryUpdate(BaseModel):
+    name: str
+
+    _name = field_validator("name")(classmethod(lambda cls, v: _category_name(v)))
 
 
 class CategoryOut(BaseModel):
@@ -18,6 +72,10 @@ class CategoryOut(BaseModel):
     id: str
     name: str
     created_at: datetime
+    # Products in the category: shown on the storefront (active) and archived.
+    # Filled by the categories endpoints; other endpoints leave them at 0.
+    product_count: int = 0
+    archived_product_count: int = 0
 
 
 # ---------------- Auth ----------------
@@ -154,10 +212,13 @@ class InventoryMovementOut(BaseModel):
 
 # ---------------- B2B ----------------
 class B2BCustomerCreate(BaseModel):
+    # Same limits as editing (B2BCustomerUpdate).
     name: str
-    phone: Optional[str] = None
+    phone: Optional[str] = Field(None, max_length=40)
     discount_percentage: float = Field(0, ge=0, le=100)
-    notes: Optional[str] = None
+    notes: Optional[str] = Field(None, max_length=2000)
+
+    _name = field_validator("name")(classmethod(lambda cls, v: _required_text("اسم العميل مطلوب")(v)))
 
 
 class B2BCustomerUpdate(BaseModel):
@@ -254,6 +315,8 @@ class FreeDistributionCreate(BaseModel):
     items: List[FreeDistributionItemIn]
     note: Optional[str] = None
 
+    _recipient = field_validator("recipient_name")(classmethod(lambda cls, v: _required_text("اسم المستلم مطلوب")(v)))
+
 
 class FreeDistributionItemOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -273,12 +336,18 @@ class FreeDistributionOut(BaseModel):
 
 # ---------------- Finance ----------------
 class FinanceEntryCreate(BaseModel):
+    """A manual entry — income or expense, under any section (website, B2B
+    or general spending). It never counts as sales revenue: revenue and B2B
+    sales come only from the automatic entries of orders (app/revenue.py);
+    manual income is "other income", manual expenses operating expenses."""
     type: FinanceEntryType
     category: str
     amount: float = Field(..., gt=0)
-    description: Optional[str] = None
+    description: Optional[str] = Field(None, max_length=500)
     entry_date: Optional[datetime] = None
     source: Literal["website", "b2b", "spending"] = "spending"
+
+    _category = field_validator("category")(classmethod(lambda cls, v: _required_text("الفئة مطلوبة", 100)(" ".join(v.split()))))
 
 
 class FinanceEntryOut(BaseModel):
@@ -291,6 +360,13 @@ class FinanceEntryOut(BaseModel):
     reference_id: Optional[str]
     source: Optional[str] = None
     entry_date: datetime
+
+    @computed_field
+    @property
+    def is_manual(self) -> bool:
+        """Entered by staff. Automatic entries (orders, edits, cancellations,
+        returns) always point at their order; manual ones never do."""
+        return self.reference_id is None
 
 
 # ---------------- Reports ----------------
@@ -348,6 +424,9 @@ class CouponUpdate(BaseModel):
     max_uses: Optional[int] = Field(None, gt=0)
     expires_at: Optional[datetime] = None
     is_active: Optional[bool] = None
+
+    # max_uses / expires_at may be cleared with null; these can't.
+    _required = field_validator("discount_value", "min_order_amount", "is_active", mode="before")(classmethod(lambda cls, v: _not_null(v)))
 
 
 class CouponOut(BaseModel):
@@ -636,6 +715,8 @@ class OfferUpdate(BaseModel):
     is_active: Optional[bool] = None
     expires_at: Optional[datetime] = None
 
+    _required = field_validator("offer_price", "is_active", mode="before")(classmethod(lambda cls, v: _not_null(v)))
+
     _end_of_day = field_validator("expires_at", mode="before")(_offer_end)
 
 
@@ -680,12 +761,19 @@ class RoutineCreate(BaseModel):
     description: Optional[str] = None
     product_ids: List[str] = Field(..., min_length=2, max_length=3)
 
+    _name = field_validator("name")(classmethod(lambda cls, v: _required_text("اسم الروتين مطلوب")(v)))
+    _products = field_validator("product_ids")(classmethod(lambda cls, v: _distinct_products(v)))
+
 
 class RoutineUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     is_active: Optional[bool] = None
     product_ids: Optional[List[str]] = Field(None, min_length=2, max_length=3)
+
+    _required = field_validator("name", "is_active", mode="before")(classmethod(lambda cls, v: _not_null(v)))
+    _name = field_validator("name")(classmethod(lambda cls, v: _required_text("اسم الروتين مطلوب")(v)))
+    _products = field_validator("product_ids")(classmethod(lambda cls, v: _distinct_products(v)))
 
 
 class RoutineItemOut(BaseModel):
@@ -715,6 +803,8 @@ class ShippingRateCreate(BaseModel):
 class ShippingRateUpdate(BaseModel):
     fee: Optional[float] = Field(None, ge=0)
     is_active: Optional[bool] = None
+
+    _required = field_validator("fee", "is_active", mode="before")(classmethod(lambda cls, v: _not_null(v)))
 
 
 class ShippingRateOut(BaseModel):
