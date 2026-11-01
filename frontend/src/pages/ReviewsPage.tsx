@@ -42,7 +42,7 @@ export default function ReviewsPage() {
         <div className="panel-head">
           <div>
             <h2>تقييمات المنتجات</h2>
-            <div className="sub" style={{ fontSize: 12.5, color: 'var(--ink-muted)', marginTop: 2 }}>
+            <div className="sub" style={{ fontSize: 12.5, color: 'var(--color-ink-muted)', marginTop: 2 }}>
               التقييم مايظهرش للعملاء إلا بعد الموافقة عليه من هنا
             </div>
           </div>
@@ -54,7 +54,7 @@ export default function ReviewsPage() {
               key={f}
               className="btn"
               onClick={() => setFilter(f)}
-              style={{ background: filter === f ? 'var(--forest)' : 'var(--parchment-2)', color: filter === f ? 'var(--cream)' : 'var(--forest)' }}
+              style={{ background: filter === f ? 'var(--color-primary)' : 'var(--color-surface-muted)', color: filter === f ? 'var(--color-on-primary)' : 'var(--color-primary-ink)' }}
             >
               {f === 'pending' ? 'في انتظار الموافقة' : f === 'approved' ? 'معتمدة' : 'الكل'}
             </button>
@@ -82,7 +82,7 @@ export default function ReviewsPage() {
                 <tr key={r.id} style={{ opacity: r.is_approved ? 1 : 0.85 }}>
                   <td style={{ fontWeight: 600 }}>{r.product_name}</td>
                   <td>{r.customer_name}</td>
-                  <td style={{ color: 'var(--gold)', letterSpacing: 1 }}>{STARS(r.rating)}</td>
+                  <td style={{ color: 'var(--color-rating)', letterSpacing: 1 }}>{STARS(r.rating)}</td>
                   <td style={{ maxWidth: 280, fontSize: 13 }}>{r.comment || '—'}</td>
                   <td>{new Date(r.created_at).toLocaleDateString('ar-EG')}</td>
                   <td>
@@ -94,7 +94,7 @@ export default function ReviewsPage() {
                       )}
                       <button
                         className="btn"
-                        style={{ padding: '5px 10px', fontSize: 12.5, background: 'var(--rose-tint)', color: 'var(--rose-text)' }}
+                        style={{ padding: '5px 10px', fontSize: 12.5, background: 'var(--color-error-tint)', color: 'var(--color-error)' }}
                         onClick={() => handleDelete(r.id)}
                       >
                         حذف

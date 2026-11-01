@@ -78,7 +78,7 @@ export default function RoutinesPage() {
         <div className="panel-head">
           <div>
             <h2>روتينات الموقع</h2>
-            <div className="sub" style={{ fontSize: 12.5, color: 'var(--ink-muted)', marginTop: 2 }}>
+            <div className="sub" style={{ fontSize: 12.5, color: 'var(--color-ink-muted)', marginTop: 2 }}>
               مجموعة من 2 أو 3 منتجات من نفس النوع، تظهر كباقة في قسم "الروتين" بالصفحة الرئيسية
             </div>
           </div>
@@ -109,8 +109,8 @@ export default function RoutinesPage() {
                     onClick={() => toggleProduct(p.id)}
                     className="btn"
                     style={{
-                      background: selected.includes(p.id) ? 'var(--forest)' : 'var(--parchment-2)',
-                      color: selected.includes(p.id) ? 'var(--cream)' : 'var(--forest)',
+                      background: selected.includes(p.id) ? 'var(--color-primary)' : 'var(--color-surface-muted)',
+                      color: selected.includes(p.id) ? 'var(--color-on-primary)' : 'var(--color-primary-ink)',
                       fontSize: 12.5, padding: '6px 12px',
                     }}
                   >
@@ -118,7 +118,7 @@ export default function RoutinesPage() {
                   </button>
                 ))}
               </div>
-              <div className="sub" style={{ fontSize: 12, color: 'var(--ink-muted)', marginTop: 6 }}>
+              <div className="sub" style={{ fontSize: 12, color: 'var(--color-ink-muted)', marginTop: 6 }}>
                 {selected.length}/3 منتجات مختارة
               </div>
             </div>
@@ -138,14 +138,14 @@ export default function RoutinesPage() {
               <div
                 key={r.id}
                 style={{
-                  border: '1px solid var(--line)', borderRadius: 10, padding: 16,
-                  opacity: r.is_active ? 1 : 0.55, background: 'var(--cream)',
+                  border: '1px solid var(--color-line)', borderRadius: 10, padding: 16,
+                  opacity: r.is_active ? 1 : 0.55, background: 'var(--color-surface)',
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <div>
                     <div style={{ fontWeight: 700 }}>{r.name}</div>
-                    {r.description && <div style={{ fontSize: 12.5, color: 'var(--ink-muted)' }}>{r.description}</div>}
+                    {r.description && <div style={{ fontSize: 12.5, color: 'var(--color-ink-muted)' }}>{r.description}</div>}
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button className="btn" style={{ padding: '5px 10px', fontSize: 12.5 }} onClick={() => toggleActive(r)}>
@@ -153,14 +153,14 @@ export default function RoutinesPage() {
                     </button>
                     <button
                       className="btn"
-                      style={{ padding: '5px 10px', fontSize: 12.5, background: 'var(--rose-tint)', color: 'var(--rose-text)' }}
+                      style={{ padding: '5px 10px', fontSize: 12.5, background: 'var(--color-error-tint)', color: 'var(--color-error)' }}
                       onClick={() => handleDelete(r.id)}
                     >
                       حذف
                     </button>
                   </div>
                 </div>
-                <div style={{ fontSize: 13, color: 'var(--ink-muted)' }}>
+                <div style={{ fontSize: 13, color: 'var(--color-ink-muted)' }}>
                   {r.items.map((it) => it.product_name).join(' + ')}
                 </div>
               </div>

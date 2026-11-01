@@ -9,13 +9,14 @@ import { useToast } from '../lib/toast';
 
 const MAX_TEXT = 200;
 
-// The storefront's own colour tokens (ecobel-website globals.css) — named
-// themes only, never free CSS.
+// The storefront's announcement themes (ecobel-website globals.css
+// .announcement-bar), drawn with the shared brand tokens — named themes
+// only, never free CSS.
 const THEMES: Record<AnnouncementBarSettings['theme'], { label: string; style: CSSProperties }> = {
-  default: { label: 'التدرج الأساسي (أسود ← رمادي)', style: { background: 'linear-gradient(to right, #231f20, #615e5f)', color: '#f2f2f2' } },
-  brand: { label: 'أسود', style: { background: '#231f20', color: '#ffffff' } },
-  accent: { label: 'رمادي غامق', style: { background: '#4c494a', color: '#ffffff' } },
-  light: { label: 'فاتح', style: { background: '#f2f2f2', color: '#231f20', borderBottom: '1px solid #e3e3e3' } },
+  default: { label: 'التدرج الأساسي (أخضر غامق ← تيل غامق)', style: { background: 'linear-gradient(to right, var(--color-brand-deep), var(--color-primary-dark))', color: 'var(--color-surface)' } },
+  brand: { label: 'تيل (لون العلامة)', style: { background: 'var(--color-primary)', color: 'var(--color-on-primary)' } },
+  accent: { label: 'رملي', style: { background: 'var(--color-accent)', color: 'var(--color-on-accent)' } },
+  light: { label: 'فاتح', style: { background: 'var(--color-surface-tint)', color: 'var(--color-ink)', borderBottom: '1px solid var(--color-line)' } },
 };
 const SPEED_SECONDS: Record<AnnouncementBarSettings['speed'], number> = { slow: 48, normal: 32, fast: 20 };
 
@@ -123,7 +124,7 @@ export default function AnnouncementBarEditor() {
       <div className="panel-head">
         <div>
           <h2>شريط الإعلان</h2>
-          <div style={{ fontSize: 12.5, color: 'var(--ink-muted)', marginTop: 2 }}>
+          <div style={{ fontSize: 12.5, color: 'var(--color-ink-muted)', marginTop: 2 }}>
             الشريط المتحرك أعلى كل صفحات الموقع — التعديل بيظهر على الموقع خلال دقيقة من غير تحديث للكود.
           </div>
         </div>
@@ -192,7 +193,7 @@ export default function AnnouncementBarEditor() {
               <label htmlFor="ab-link">رابط عند الضغط (اختياري)</label>
               <input id="ab-link" dir="ltr" value={draft.link_url ?? ''} onChange={(e) => set('link_url', e.target.value)} placeholder="/products?offers=1"
                 aria-invalid={Boolean(urlProblem)} aria-describedby="ab-link-hint" />
-              <div id="ab-link-hint" className="field-hint" style={urlProblem ? { color: 'var(--rose-text)' } : undefined}>
+              <div id="ab-link-hint" className="field-hint" style={urlProblem ? { color: 'var(--color-error)' } : undefined}>
                 {urlProblem ?? 'صفحة في الموقع (تبدأ بـ /) أو عنوان يبدأ بـ https://'}
               </div>
             </div>

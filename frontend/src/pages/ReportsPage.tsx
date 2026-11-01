@@ -23,7 +23,7 @@ export default function ReportsPage() {
                 <select
                   value={financeSource}
                   onChange={(e) => setFinanceSource(e.target.value as FinanceSource | '')}
-                  style={{ border: '1px solid var(--line)', borderRadius: 6, padding: '8px 10px', fontSize: 13 }}
+                  style={{ border: '1px solid var(--color-line)', borderRadius: 6, padding: '8px 10px', fontSize: 13 }}
                 >
                   <option value="">كل المصادر</option>
                   <option value="website">إيرادات الموقع</option>
@@ -62,12 +62,12 @@ function ReportRow({ title, description, action }: { title: string; description:
     <div
       style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        border: '1px solid var(--line)', borderRadius: 10, padding: 16, background: 'var(--cream)',
+        border: '1px solid var(--color-line)', borderRadius: 10, padding: 16, background: 'var(--color-surface)',
       }}
     >
       <div>
         <div style={{ fontWeight: 700, marginBottom: 4 }}>{title}</div>
-        <div style={{ fontSize: 12.5, color: 'var(--ink-muted)' }}>{description}</div>
+        <div style={{ fontSize: 12.5, color: 'var(--color-ink-muted)' }}>{description}</div>
       </div>
       {action}
     </div>

@@ -126,7 +126,7 @@ export default function B2BPage() {
         <div className="panel-head">
           <div>
             <h2 id="b2b-orders-title">أوردرات الجملة</h2>
-            <div className="sub" style={{ fontSize: 12.5, color: 'var(--ink-muted)', marginTop: 2 }}>الأحدث أولًا</div>
+            <div className="sub" style={{ fontSize: 12.5, color: 'var(--color-ink-muted)', marginTop: 2 }}>الأحدث أولًا</div>
           </div>
           <button
             className="btn btn-primary"
@@ -173,7 +173,7 @@ export default function B2BPage() {
         <div className="panel-head">
           <div>
             <h2 id="b2b-customers-title">عملاء الجملة B2B</h2>
-            <div className="sub" style={{ fontSize: 12.5, color: 'var(--ink-muted)', marginTop: 2 }}>
+            <div className="sub" style={{ fontSize: 12.5, color: 'var(--color-ink-muted)', marginTop: 2 }}>
               نسبة الخصم ثابتة لكل عميل وتُحسب تلقائيًا على كل أوردر — الأحدث إضافة أولًا
             </div>
           </div>
@@ -654,7 +654,7 @@ function OrderFormModal({ order, onClose, onSaved }: { order?: B2BOrder; onClose
             </select>
             <input
               type="number" min={1} value={addQuantity} onChange={(e) => setAddQuantity(e.target.value)} aria-label="الكمية"
-              style={{ width: 80, border: '1px solid var(--line)', borderRadius: 6, padding: '8px' }}
+              style={{ width: 80, border: '1px solid var(--color-line)', borderRadius: 6, padding: '8px' }}
             />
             <button type="button" className="btn btn-secondary" onClick={addLine}>+ إضافة</button>
           </div>
@@ -671,7 +671,7 @@ function OrderFormModal({ order, onClose, onSaved }: { order?: B2BOrder; onClose
                 <div className="record-end">
                   <input type="number" min={1} value={l.quantity} onChange={(e) => setLineQuantity(l.product_id, e.target.value)}
                     aria-label={`كمية ${productName(l.product_id)}`}
-                    style={{ width: 70, border: '1px solid var(--line)', borderRadius: 6, padding: '6px' }} />
+                    style={{ width: 70, border: '1px solid var(--color-line)', borderRadius: 6, padding: '6px' }} />
                   <button type="button" className="btn btn-danger btn-sm" onClick={() => removeLine(l.product_id)} aria-label={`إزالة ${productName(l.product_id)}`}>✕</button>
                 </div>
               </li>

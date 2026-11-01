@@ -257,7 +257,7 @@ export default function OffersPage() {
         <div className="panel-head" style={{ flexWrap: 'wrap', gap: 10 }}>
           <div>
             <h2>العروض</h2>
-            <div style={{ fontSize: 12.5, color: 'var(--ink-muted)', marginTop: 2 }}>
+            <div style={{ fontSize: 12.5, color: 'var(--color-ink-muted)', marginTop: 2 }}>
               كل عروض الموقع في مكان واحد: أسعار عروض المنتجات، الباقات، الشحن المجاني، الخصومات والهدايا
             </div>
           </div>
@@ -269,9 +269,9 @@ export default function OffersPage() {
             const pressed = k === 'total' ? state === '' : state === k;
             return (
               <button key={k} type="button" aria-pressed={pressed} onClick={() => { setState(k === 'total' ? '' : k); setOffset(0); }}
-                style={{ textAlign: 'start', border: `1px solid ${pressed ? 'var(--forest)' : 'var(--line)'}`, borderRadius: 8, padding: '10px 12px', background: 'var(--cream)', cursor: 'pointer', font: 'inherit', minWidth: 0 }}>
-                <div style={{ fontSize: 12, color: 'var(--ink-muted)', fontWeight: 600 }}>{label}</div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--forest-deep)' }}>{(counts[k] ?? 0).toLocaleString('ar-EG')}</div>
+                style={{ textAlign: 'start', border: `1px solid ${pressed ? 'var(--color-primary-dark)' : 'var(--color-line)'}`, borderRadius: 8, padding: '10px 12px', background: 'var(--color-surface)', cursor: 'pointer', font: 'inherit', minWidth: 0 }}>
+                <div style={{ fontSize: 12, color: 'var(--color-ink-muted)', fontWeight: 600 }}>{label}</div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-ink)' }}>{(counts[k] ?? 0).toLocaleString('ar-EG')}</div>
               </button>
             );
           })}
@@ -295,7 +295,7 @@ export default function OffersPage() {
           </select>
         </div>
         <div style={{ display: 'flex', gap: 10, padding: '0 22px 12px', alignItems: 'center' }}>
-          <label htmlFor="offers-state" style={{ fontSize: 12.5, color: 'var(--ink-muted)' }}>الحالة</label>
+          <label htmlFor="offers-state" style={{ fontSize: 12.5, color: 'var(--color-ink-muted)' }}>الحالة</label>
           <select id="offers-state" value={state} onChange={(e) => { setState(e.target.value as PromotionState | ''); setOffset(0); }} style={{ minWidth: 0 }}>
             <option value="">الكل</option>
             {(Object.keys(STATE_LABEL) as PromotionState[]).map((s) => <option key={s} value={s}>{STATE_LABEL[s]}</option>)}
@@ -331,7 +331,7 @@ export default function OffersPage() {
               <tbody>
                 {page.items.map((p) => (
                   <tr key={`${p.source}-${p.id}`} data-highlight={highlight === p.id || undefined}
-                    style={highlight === p.id ? { background: 'var(--ok-tint)', transition: 'background 0.6s' } : undefined}>
+                    style={highlight === p.id ? { background: 'var(--color-success-tint)', transition: 'background 0.6s' } : undefined}>
                     <td style={{ fontWeight: 600 }}>
                       {p.name}
                       {p.badge_text && <div><span className="pill" style={{ marginTop: 4 }}>{p.badge_text}</span></div>}
@@ -342,7 +342,7 @@ export default function OffersPage() {
                     <td style={{ fontSize: 12.5 }}>
                       {p.summary}
                       {!isProductOffer(p) && (p.per_customer_limit || !p.combinable) && (
-                        <div style={{ color: 'var(--ink-muted)' }}>
+                        <div style={{ color: 'var(--color-ink-muted)' }}>
                           {[p.per_customer_limit ? `${p.per_customer_limit} مرة لكل عميل` : '', p.combinable ? '' : 'ما بيتجمعش'].filter(Boolean).join(' · ')}
                         </div>
                       )}
@@ -497,7 +497,7 @@ function PreviewPanel({ build, bundle = false }: { build: () => PromotionInput; 
   }
 
   return (
-    <section aria-label="معاينة العرض" style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 14, margin: '14px 0' }}>
+    <section aria-label="معاينة العرض" style={{ border: '1px solid var(--color-line)', borderRadius: 10, padding: 14, margin: '14px 0' }}>
       <h3 className="detail-heading">معاينة على سلة تجريبية</h3>
       <div className="field-hint" style={{ marginBottom: 8 }}>
         بنفس قواعد الموقع وبأسعار النهارده — العرض بيتجرّب كأنه شغال، ومفيش حاجة بتتحفظ.
@@ -533,18 +533,18 @@ function PreviewPanel({ build, bundle = false }: { build: () => PromotionInput; 
           {result.lines.map((l) => (
             <div key={l.product_id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
               <span>{l.product_name} × {l.quantity}{l.free_units > 0 && <strong> ({l.free_units} هدية)</strong>}</span>
-              <span>{money(l.line_total)}{l.discount > 0 && <span style={{ color: 'var(--forest)' }}> −{money(l.discount)}</span>}</span>
+              <span>{money(l.line_total)}{l.discount > 0 && <span style={{ color: 'var(--color-primary-ink)' }}> −{money(l.discount)}</span>}</span>
             </div>
           ))}
-          <div style={{ borderTop: '1px solid var(--line)', marginTop: 6, paddingTop: 6 }}>
+          <div style={{ borderTop: '1px solid var(--color-line)', marginTop: 6, paddingTop: 6 }}>
             <div>الإجمالي الفرعي: {money(result.subtotal)}</div>
             {result.applied ? (
               <>
-                {result.discount > 0 && <div style={{ color: 'var(--forest)' }}>خصم العرض: −{money(result.discount)}</div>}
-                {result.shipping_discount > 0 && <div style={{ color: 'var(--forest)' }}>الشحن مجاني (وفّر {money(result.shipping_discount)})</div>}
+                {result.discount > 0 && <div style={{ color: 'var(--color-primary-ink)' }}>خصم العرض: −{money(result.discount)}</div>}
+                {result.shipping_discount > 0 && <div style={{ color: 'var(--color-primary-ink)' }}>الشحن مجاني (وفّر {money(result.shipping_discount)})</div>}
               </>
             ) : (
-              <div style={{ color: 'var(--rose-text)' }}>العرض مش متطبّق: {result.reason}</div>
+              <div style={{ color: 'var(--color-error)' }}>العرض مش متطبّق: {result.reason}</div>
             )}
             {result.shipping_fee !== null && result.shipping_discount === 0 && <div>الشحن: {money(result.shipping_fee)}</div>}
             <div style={{ fontWeight: 700 }}>الإجمالي: {money(result.total)}</div>
@@ -585,7 +585,7 @@ function ProductPicker({ label, products, selected, onChange, disabled }: {
         <>
           <input type="search" value={term} onChange={(e) => setTerm(e.target.value)} placeholder="ابحثي باسم المنتج أو الكود..." aria-label={`${label} — بحث`} />
           {term.trim() && (
-            <div role="listbox" aria-label="نتايج البحث" style={{ border: '1px solid var(--line)', borderRadius: 8, marginTop: 4, maxHeight: 200, overflowY: 'auto' }}>
+            <div role="listbox" aria-label="نتايج البحث" style={{ border: '1px solid var(--color-line)', borderRadius: 8, marginTop: 4, maxHeight: 200, overflowY: 'auto' }}>
               {matches.length === 0 ? (
                 <div className="field-hint" style={{ padding: 8 }}>مفيش نتايج</div>
               ) : matches.map((p) => (
@@ -593,7 +593,7 @@ function ProductPicker({ label, products, selected, onChange, disabled }: {
                   onClick={() => { onChange([...selected, p.id]); setTerm(''); }}
                   style={{ display: 'flex', width: '100%', justifyContent: 'space-between', gap: 8, padding: '6px 10px', border: 'none', background: 'none', cursor: 'pointer', font: 'inherit', textAlign: 'start' }}>
                   <span>{p.name}{!p.is_active && ' (موقوف)'}</span>
-                  <span style={{ color: 'var(--ink-muted)' }}>{money(p.sale_price)}</span>
+                  <span style={{ color: 'var(--color-ink-muted)' }}>{money(p.sale_price)}</span>
                 </button>
               ))}
             </div>
@@ -754,7 +754,7 @@ function PromotionFormModal({ promotion, onClose, onSaved, onPickProductPrice }:
           <legend style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>نوع العرض</legend>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 8 }}>
             {(Object.keys(TYPE_LABEL) as OfferListType[]).filter((t) => t !== 'product_price' || !promotion).map((t) => (
-              <label key={t} style={{ border: `1px solid ${type === t ? 'var(--forest)' : 'var(--line)'}`, borderRadius: 10, padding: 10, cursor: 'pointer', fontWeight: 400 }}>
+              <label key={t} style={{ border: `1px solid ${type === t ? 'var(--color-primary-dark)' : 'var(--color-line)'}`, borderRadius: 10, padding: 10, cursor: 'pointer', fontWeight: 400 }}>
                 <input type="radio" name="promotion-type" value={t} checked={type === t}
                   onChange={() => (t === 'product_price' ? onPickProductPrice() : changeType(t))} />{' '}
                 <strong>{TYPE_LABEL[t]}</strong>
@@ -878,7 +878,7 @@ function PromotionFormModal({ promotion, onClose, onSaved, onPickProductPrice }:
           <ProductPicker label="منتجات محددة" products={products} selected={eligibleProducts} onChange={setEligibleProducts} disabled={locked} />
         </div>
         {combination && eligibleProducts.length > 0 && (
-          <fieldset disabled={locked} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 12, margin: '10px 0 0' }}>
+          <fieldset disabled={locked} style={{ border: '1px solid var(--color-line)', borderRadius: 10, padding: 12, margin: '10px 0 0' }}>
             <legend style={{ fontSize: 13, fontWeight: 700, padding: '0 6px' }}>محتوى الباقة الواحدة</legend>
             {eligibleProducts.map((id) => {
               const product = products.find((x) => x.id === id);
