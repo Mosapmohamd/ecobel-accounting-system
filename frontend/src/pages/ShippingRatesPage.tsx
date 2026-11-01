@@ -63,7 +63,7 @@ export default function ShippingRatesPage() {
         <div className="panel-head">
           <div>
             <h2>أسعار الشحن</h2>
-            <div className="sub" style={{ fontSize: 12.5, color: 'var(--ink-muted)', marginTop: 2 }}>
+            <div className="sub" style={{ fontSize: 12.5, color: 'var(--color-ink-muted)', marginTop: 2 }}>
               رسوم التوصيل حسب المحافظة — الموقع بيوصّل بس للمحافظات المفعّلة هنا
             </div>
           </div>
@@ -105,7 +105,7 @@ export default function ShippingRatesPage() {
                         const v = Number(e.target.value);
                         if (v !== r.fee) handleUpdateFee(r, v);
                       }}
-                      style={{ width: 90, border: '1px solid var(--line)', borderRadius: 6, padding: '5px 8px', fontSize: 13 }}
+                      style={{ width: 90, border: '1px solid var(--color-line)', borderRadius: 6, padding: '5px 8px', fontSize: 13 }}
                     />
                     {' ج.م'}
                   </td>
@@ -117,7 +117,7 @@ export default function ShippingRatesPage() {
                       </button>
                       <button
                         className="btn"
-                        style={{ padding: '5px 10px', fontSize: 12.5, background: 'var(--rose-tint)', color: 'var(--rose-text)' }}
+                        style={{ padding: '5px 10px', fontSize: 12.5, background: 'var(--color-error-tint)', color: 'var(--color-error)' }}
                         onClick={() => handleDelete(r.id)}
                       >
                         حذف

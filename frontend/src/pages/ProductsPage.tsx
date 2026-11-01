@@ -377,8 +377,8 @@ function ProductFormModal({
         </div>
 
         {editing && product && (
-          <section aria-labelledby="pf-photos" style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid var(--line)' }}>
-            <h3 id="pf-photos" style={{ fontSize: 16, color: 'var(--forest-deep)', margin: '0 0 8px' }}>صور المنتج</h3>
+          <section aria-labelledby="pf-photos" style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid var(--color-line)' }}>
+            <h3 id="pf-photos" style={{ fontSize: 16, color: 'var(--color-ink)', margin: '0 0 8px' }}>صور المنتج</h3>
             <ProductPhotos
               product={product}
               onBusyChange={setPhotosBusy}
@@ -436,7 +436,7 @@ function AdjustStockModal({
 
   return (
     <Modal title={`تسوية مخزون — ${product.name}`} onClose={onClose}>
-      <p style={{ fontSize: 13.5, color: 'var(--ink-muted)', marginTop: -8 }}>
+      <p style={{ fontSize: 13.5, color: 'var(--color-ink-muted)', marginTop: -8 }}>
         الكمية الحالية: <strong>{product.quantity}</strong>
       </p>
       <form onSubmit={handleSubmit}>

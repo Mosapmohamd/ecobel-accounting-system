@@ -44,7 +44,7 @@ export function OrderReturnsPanel({ order, onChanged }: { order: OnlineOrder; on
   }
   useEffect(load, [order.id, order.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (error) return <div style={{ fontSize: 12.5, color: 'var(--rose-text)', marginTop: 10 }}>{error}</div>;
+  if (error) return <div style={{ fontSize: 12.5, color: 'var(--color-error)', marginTop: 10 }}>{error}</div>;
   if (!summary) return <div style={{ fontSize: 12.5, marginTop: 10 }}>جاري تحميل المرتجعات...</div>;
 
   const anyReturned = summary.lines.some((l) => l.returned > 0);
@@ -53,9 +53,9 @@ export function OrderReturnsPanel({ order, onChanged }: { order: OnlineOrder; on
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <strong>المرتجعات:</strong>
         {summary.returns.length === 0 ? (
-          <span style={{ color: 'var(--ink-muted)' }}>مفيش مرتجعات</span>
+          <span style={{ color: 'var(--color-ink-muted)' }}>مفيش مرتجعات</span>
         ) : (
-          <span style={{ color: 'var(--ink-muted)' }}>
+          <span style={{ color: 'var(--color-ink-muted)' }}>
             {summary.fully_returned ? 'الطلب رجع كله' : 'مرتجع جزئي'} · قيمة المرتجع {money(summary.merchandise_returned)} من {money(summary.merchandise_total)}
             {summary.revenue_reversed > 0 && ` · اتعكس من الإيراد ${money(summary.revenue_reversed)}`}
           </span>
@@ -91,7 +91,7 @@ export function OrderReturnsPanel({ order, onChanged }: { order: OnlineOrder; on
         </table>
       )}
       {summary.returns.length > 0 && (
-        <ul style={{ margin: '6px 0 0', paddingInlineStart: 18, color: 'var(--ink-muted)' }}>
+        <ul style={{ margin: '6px 0 0', paddingInlineStart: 18, color: 'var(--color-ink-muted)' }}>
           {summary.returns.map((r) => {
             const units = r.items.reduce((n, i) => n + i.quantity, 0);
             const restocked = r.items.filter((i) => i.restock).reduce((n, i) => n + i.quantity, 0);
@@ -237,7 +237,7 @@ function ReturnDialog({ order, summary, onClose, onRecorded }: {
                 <td>
                   {l.product_name}
                   <br />
-                  <span style={{ color: 'var(--ink-muted)', fontSize: 12 }}>قيمة القطعة {money(l.unit_value)}</span>
+                  <span style={{ color: 'var(--color-ink-muted)', fontSize: 12 }}>قيمة القطعة {money(l.unit_value)}</span>
                 </td>
                 <td>{l.returnable}</td>
                 <td>
@@ -302,7 +302,7 @@ function ReturnDialog({ order, summary, onClose, onRecorded }: {
                 ? `هيتسجل عكس إيراد بـ ${money(preview.revenue_reversed)} (قيد الإيراد الأصلي بيفضل في السجل).`
                 : 'مش هيتسجل عكس إيراد — إيراد الطلب ده ما اتسجلش (مش دفع عند الاستلام).'}
             </div>
-            <div style={{ color: 'var(--ink-muted)' }}>الشحن ({money(summary.shipping_fee)}) مش بيترجع.</div>
+            <div style={{ color: 'var(--color-ink-muted)' }}>الشحن ({money(summary.shipping_fee)}) مش بيترجع.</div>
           </div>
         )}
 

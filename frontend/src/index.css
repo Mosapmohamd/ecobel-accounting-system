@@ -1,41 +1,61 @@
 @import url('https://fonts.googleapis.com/css2?family=Markazi+Text:wght@600;700&family=Tajawal:wght@400;500;700;800&display=swap');
 
 :root {
-  /* EcoBel identity — taken from the official logo (/Logo.jpg in the project
-     root): rich-black ink #231f20 on a gray gradient #b3b3b3 → #f2f2f2. Same
-     values as the storefront (ecobel-website frontend/src/app/globals.css).
-     Variable NAMES are historical (used all over this dashboard) — read them
-     by role, not by literal name. */
-  --forest: #231f20;        /* primary brand + action color (logo ink) */
-  --forest-deep: #423f40;   /* primary hover/pressed, headings (ramp 15%) */
-  --sage: #615e5f;          /* muted secondary accent, avatar fill (ramp 30%) */
-  --gold: #4c494a;          /* ratings (ramp 20%) — same as the storefront's accent */
-  --gold-soft: #f2f2f2;     /* light text/highlights on dark panels (logo light) */
-  --parchment: #f2f2f2;     /* page background (logo light) */
-  --parchment-2: #ebebeb;   /* chips, inactive toggles (logo gradient) */
-  --ink: #231f20;           /* text (logo ink) */
-  --ink-muted: #615e5f;     /* secondary/meta text (ramp 30%; ≥5:1 on every surface) */
-  --cream: #ffffff;
-  --line: rgba(35, 31, 32, 0.12);
-  --line-dark: rgba(255, 255, 255, 0.18);
-  --focus-ring: #615e5f;    /* input focus outline (6.4:1 on white) */
-  --on-dark-muted: rgba(242, 242, 242, 0.78); /* nav text on the dark sidebar */
-  --on-dark-faint: rgba(242, 242, 242, 0.6);  /* small labels on the dark sidebar */
-  --on-dark-hover: rgba(242, 242, 242, 0.12); /* active/hovered nav item */
-  --overlay: rgba(35, 31, 32, 0.55);          /* modal backdrop */
-  --shadow: rgba(35, 31, 32, 0.12);
+  /* EcoBel brand palette (2026-10-31) — the same tokens, names and values as
+     the storefront (ecobel-website frontend/src/app/globals.css). Read them by
+     role. The brand teal is a FILL color (dark text on it, 5.4:1): teal text
+     or white text on teal would be only 2.2:1 — text in the brand hue uses
+     --color-primary-ink. Contrast notes are WCAG AA ratios. */
 
-  /* Status colors — kept recognizable, not part of the monochrome brand. */
-  --rose: #dc4c64;          /* alerts/danger */
-  --rose-tint: rgba(220, 76, 100, 0.12);
-  --rose-text: #ba1a1a;     /* danger as text (5.6:1 on its tint) — the storefront's error color */
-  --rose-border: rgba(220, 76, 100, 0.45);
-  --ok: #6b9c6c;            /* success */
-  --ok-strong: #3f6b40;     /* success text on a tinted background */
-  --ok-tint: rgba(107, 156, 108, 0.14);
-  --warn: #c9862a;          /* warning */
-  --warn-tint: rgba(201, 134, 42, 0.15);
-  --warn-text: #83571b;     /* warning as text: the same amber, darker (5.4:1 on its tint) */
+  /* Brand & actions */
+  --color-primary: #49c0b7;        /* brand teal: primary buttons, selected nav/toggles, badges (fill only) */
+  --color-on-primary: #263b38;     /* text/icons on a primary fill (5.4:1) */
+  --color-primary-dark: #247f79;   /* deep teal: hover/pressed fill (white text 4.8:1), focus rings, selected borders */
+  --color-primary-light: #ddf3f0;  /* mint: hover/selected tints */
+  --color-primary-ink: #1f6e69;    /* teal TEXT: links, active tabs, brand-hue figures (≥5.2:1 on every surface) */
+  --color-brand-deep: #263b38;     /* deep panels: the sidebar (white text 11.9:1) */
+  --color-accent: #e8b98a;         /* warm sand: highlight badges (fill only) */
+  --color-on-accent: #263b38;      /* text on an accent fill (6.7:1) */
+  --color-rating: #a86b2f;         /* star ratings (sand deepened to 4.4:1 on white) */
+
+  /* Surfaces & text */
+  --color-surface: #ffffff;        /* cards, panels, modals, inputs */
+  --color-surface-tint: #f7f8f5;   /* off-white page background */
+  --color-surface-muted: #eef2f0;  /* chips, inactive toggles, secondary buttons */
+  --color-line: #e2eae7;           /* hairline borders */
+  --color-ink: #263b38;            /* body text, headings, KPI figures */
+  --color-ink-muted: #5e6e6b;      /* secondary/meta text — the palette's #687875 deepened to stay ≥4.6:1 on every surface */
+  --color-focus: #247f79;          /* keyboard focus outline (4.8:1 on white) */
+
+  /* On the deep sidebar */
+  --color-on-dark: #ffffff;
+  --color-on-dark-muted: rgba(255, 255, 255, 0.8);  /* nav text (8.6:1) */
+  --color-on-dark-faint: rgba(255, 255, 255, 0.66); /* small group labels (6.1:1) */
+  --color-on-dark-hover: rgba(255, 255, 255, 0.1);  /* hovered nav item */
+  --color-line-on-dark: rgba(255, 255, 255, 0.16);
+
+  --color-overlay: rgba(38, 59, 56, 0.55);          /* modal backdrop (ink) */
+  --color-shadow: rgba(38, 59, 56, 0.12);
+
+  /* Semantic — kept apart from the brand hues (teal/green/sand). */
+  --color-success: #2e7d32;
+  --color-success-strong: #1e5e22;  /* success text on its tint */
+  --color-success-tint: rgba(46, 125, 50, 0.12);
+  --color-warning: #9a5b00;         /* warning text and icons (5.4:1 on white) */
+  --color-warning-tint: rgba(154, 91, 0, 0.12);
+  --color-error: #ba1a1a;           /* errors, destructive actions (6.5:1 on white) */
+  --color-error-tint: rgba(186, 26, 26, 0.09);
+  --color-error-border: rgba(186, 26, 26, 0.4);
+  --color-info: #2b5c9e;
+  --color-info-tint: rgba(43, 92, 158, 0.1);
+
+  /* Charts — distinct series, each ≥3:1 against the white chart background;
+     series 1 is the brand's deep teal. Use in this order. */
+  --color-chart-1: #247f79;  /* deep teal */
+  --color-chart-2: #b97a3d;  /* deep sand */
+  --color-chart-3: #2b5c9e;  /* blue */
+  --color-chart-4: #8a4f7d;  /* plum */
+  --color-chart-5: #5e6e6b;  /* slate */
 
   --font-body: 'Tajawal', sans-serif;
   --font-display: 'Markazi Text', serif;
@@ -53,8 +73,8 @@ body,
 
 body {
   margin: 0;
-  background: var(--parchment);
-  color: var(--ink);
+  background: var(--color-surface-tint);
+  color: var(--color-ink);
   font-family: var(--font-body);
   direction: rtl;
 }
@@ -92,8 +112,8 @@ textarea {
 .sidebar {
   width: 230px;
   flex: none;
-  background: var(--ink);
-  color: var(--cream);
+  background: var(--color-brand-deep);
+  color: var(--color-on-dark);
   padding: 24px 18px;
   display: flex;
   flex-direction: column;
@@ -118,7 +138,7 @@ textarea {
 
 .nav-label {
   font-size: 11px;
-  color: var(--on-dark-faint);
+  color: var(--color-on-dark-faint);
   font-weight: 700;
   margin: 14px 10px 6px;
 }
@@ -130,7 +150,7 @@ textarea {
   padding: 10px 12px;
   border-radius: 6px;
   font-size: 14px;
-  color: var(--on-dark-muted);
+  color: var(--color-on-dark-muted);
   text-decoration: none;
   font-weight: 500;
   border: none;
@@ -145,10 +165,20 @@ textarea {
   flex: none;
 }
 
-.nav-item.active,
 .nav-item:hover {
-  background: var(--on-dark-hover);
-  color: var(--gold-soft);
+  background: var(--color-on-dark-hover);
+  color: var(--color-on-dark);
+}
+
+/* Selected page: the brand teal with dark text (5.4:1). */
+.nav-item.active {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.nav-item:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .nav-item.active {
@@ -161,8 +191,8 @@ textarea {
 }
 
 .topbar {
-  background: var(--cream);
-  border-bottom: 1px solid var(--line);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-line);
   padding: 18px 30px;
   display: flex;
   align-items: center;
@@ -171,12 +201,12 @@ textarea {
 
 .topbar h1 {
   font-size: 26px;
-  color: var(--forest-deep);
+  color: var(--color-ink);
 }
 
 .topbar .sub {
   font-size: 13px;
-  color: var(--ink-muted);
+  color: var(--color-ink-muted);
   margin-top: 2px;
   font-family: var(--font-body);
 }
@@ -187,29 +217,29 @@ textarea {
   gap: 10px;
   font-size: 13.5px;
   font-weight: 600;
-  color: var(--forest);
+  color: var(--color-primary-ink);
 }
 
 .avatar {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: var(--sage);
+  background: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--cream);
+  color: var(--color-on-primary);
   font-weight: 700;
   font-size: 13px;
 }
 
 .logout-btn {
   background: none;
-  border: 1px solid var(--line);
+  border: 1px solid var(--color-line);
   border-radius: 6px;
   padding: 7px 14px;
   font-size: 13px;
-  color: var(--forest);
+  color: var(--color-primary-ink);
   font-weight: 600;
 }
 
@@ -226,15 +256,15 @@ textarea {
 }
 
 .kpi-card {
-  background: var(--cream);
-  border: 1px solid var(--line);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
   border-radius: 8px;
   padding: 20px;
 }
 
 .kpi-card .label {
   font-size: 12.5px;
-  color: var(--ink-muted);
+  color: var(--color-ink-muted);
   font-weight: 600;
 }
 
@@ -242,14 +272,14 @@ textarea {
   font-family: var(--font-display);
   font-size: 30px;
   font-weight: 700;
-  color: var(--forest-deep);
+  color: var(--color-ink);
   margin-top: 6px;
 }
 
 /* ---- Panels & tables ---- */
 .panel {
-  background: var(--cream);
-  border: 1px solid var(--line);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
   border-radius: 8px;
   margin-bottom: 26px;
   overflow: hidden;
@@ -260,14 +290,14 @@ textarea {
   justify-content: space-between;
   align-items: center;
   padding: 18px 22px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--color-line);
   gap: 12px;
   flex-wrap: wrap;
 }
 
 .panel-head h2 {
   font-size: 19px;
-  color: var(--forest-deep);
+  color: var(--color-ink);
 }
 
 .panel-body {
@@ -282,16 +312,16 @@ table {
 th {
   text-align: right;
   font-size: 11.5px;
-  color: var(--ink-muted);
+  color: var(--color-ink-muted);
   font-weight: 700;
   padding: 10px 22px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--color-line);
 }
 
 td {
   padding: 13px 22px;
   font-size: 13.5px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--color-line);
 }
 
 tr:last-child td {
@@ -307,18 +337,18 @@ tr:last-child td {
 }
 
 .status.ok {
-  background: var(--ok-tint);
-  color: var(--ok-strong);
+  background: var(--color-success-tint);
+  color: var(--color-success-strong);
 }
 
 .status.low {
-  background: var(--warn-tint);
-  color: var(--warn-text);
+  background: var(--color-warning-tint);
+  color: var(--color-warning);
 }
 
 .status.out {
-  background: var(--rose-tint);
-  color: var(--rose-text);
+  background: var(--color-error-tint);
+  color: var(--color-error);
 }
 
 /* ---- Buttons ---- */
@@ -332,22 +362,39 @@ tr:last-child td {
 }
 
 .btn-primary {
-  background: var(--forest);
-  color: var(--cream);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
-.btn-primary:hover {
-  background: var(--forest-deep);
+.btn-primary:hover:not(:disabled),
+.btn-primary:active:not(:disabled) {
+  background: var(--color-primary-dark);
+  color: var(--color-surface);
 }
 
 .btn-secondary {
-  background: var(--parchment-2);
-  color: var(--forest);
+  background: var(--color-surface-muted);
+  color: var(--color-primary-ink);
+}
+
+.btn-secondary:hover:not(:disabled),
+.btn-secondary:active:not(:disabled) {
+  background: var(--color-primary-light);
 }
 
 .btn-danger {
-  background: var(--rose-tint);
-  color: var(--rose-text);
+  background: var(--color-error-tint);
+  color: var(--color-error);
+}
+
+.btn-danger:hover:not(:disabled),
+.btn-danger:active:not(:disabled) {
+  background: color-mix(in srgb, var(--color-error) 16%, transparent);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
 }
 
 .btn:disabled {
@@ -371,31 +418,31 @@ tr:last-child td {
 .field label {
   font-size: 12.5px;
   font-weight: 700;
-  color: var(--forest);
+  color: var(--color-ink);
 }
 
 .field input,
 .field select,
 .field textarea {
-  border: 1px solid var(--line);
+  border: 1px solid var(--color-line);
   border-radius: 6px;
   padding: 9px 12px;
   font-size: 14px;
-  background: var(--cream);
-  color: var(--ink);
+  background: var(--color-surface);
+  color: var(--color-ink);
 }
 
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
-  outline: 2px solid var(--focus-ring);
+  outline: 2px solid var(--color-focus);
   outline-offset: 1px;
 }
 
 /* ---- Misc ---- */
 .error-banner {
-  background: var(--rose-tint);
-  color: var(--rose-text);
+  background: var(--color-error-tint);
+  color: var(--color-error);
   border-radius: 6px;
   padding: 10px 14px;
   font-size: 13.5px;
@@ -405,7 +452,7 @@ tr:last-child td {
 .empty-state {
   padding: 40px 22px;
   text-align: center;
-  color: var(--ink-muted);
+  color: var(--color-ink-muted);
   font-size: 14px;
 }
 
@@ -415,14 +462,14 @@ tr:last-child td {
   font-weight: 700;
   padding: 4px 12px;
   border-radius: 100px;
-  background: var(--parchment-2);
-  color: var(--forest);
+  background: var(--color-surface-muted);
+  color: var(--color-primary-ink);
 }
 
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: var(--overlay);
+  background: var(--color-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -431,7 +478,7 @@ tr:last-child td {
 }
 
 .modal {
-  background: var(--cream);
+  background: var(--color-surface);
   border-radius: 10px;
   padding: 26px;
   width: 100%;
@@ -442,7 +489,7 @@ tr:last-child td {
 
 .modal h2 {
   font-size: 21px;
-  color: var(--forest-deep);
+  color: var(--color-ink);
   margin-bottom: 18px;
 }
 
@@ -483,16 +530,16 @@ tr:last-child td {
   gap: 12px;
   padding: 12px 14px;
   border-radius: 8px;
-  background: var(--cream);
-  border: 1px solid var(--line);
-  border-inline-start: 4px solid var(--forest);
-  box-shadow: 0 6px 20px var(--shadow);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-inline-start: 4px solid var(--color-primary);
+  box-shadow: 0 6px 20px var(--color-shadow);
   font-size: 13.5px;
-  color: var(--ink);
+  color: var(--color-ink);
 }
 
 .toast-error {
-  border-inline-start-color: var(--rose);
+  border-inline-start-color: var(--color-error);
 }
 
 .toast span {
@@ -504,7 +551,7 @@ tr:last-child td {
   border: none;
   font-size: 18px;
   line-height: 1;
-  color: var(--ink);
+  color: var(--color-ink);
   opacity: 0.6;
   cursor: pointer;
 }
@@ -521,7 +568,7 @@ tr:last-child td {
 
 .field-hint {
   font-size: 12px;
-  color: var(--ink-muted);
+  color: var(--color-ink-muted);
   line-height: 1.6;
 }
 
@@ -530,7 +577,7 @@ tr:last-child td {
   gap: 4px;
   padding: 4px;
   border-radius: 8px;
-  background: var(--parchment-2);
+  background: var(--color-surface-muted);
 }
 
 .status-tabs button {
@@ -541,14 +588,19 @@ tr:last-child td {
   font: inherit;
   font-size: 13px;
   font-weight: 700;
-  color: var(--ink-muted);
+  color: var(--color-ink-muted);
   cursor: pointer;
 }
 
+.status-tabs button:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
 .status-tabs button[aria-pressed='true'] {
-  background: var(--cream);
-  color: var(--forest);
-  box-shadow: 0 1px 3px var(--shadow);
+  background: var(--color-surface);
+  color: var(--color-primary-ink);
+  box-shadow: 0 1px 3px var(--color-shadow);
 }
 
 .row-actions {
@@ -564,8 +616,8 @@ tr:last-child td {
   min-width: 20px;
   padding: 1px 5px;
   border-radius: 10px;
-  background: var(--forest);
-  color: var(--cream);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
   font-size: 10.5px;
   font-weight: 700;
   line-height: 1.5;
@@ -581,23 +633,23 @@ tr:last-child td {
 }
 
 .photo-tile {
-  border: 1px solid var(--line);
+  border: 1px solid var(--color-line);
   border-radius: 8px;
   padding: 8px;
-  background: var(--cream);
+  background: var(--color-surface);
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
 .photo-tile.is-main {
-  border-color: var(--forest);
-  box-shadow: 0 0 0 1px var(--forest);
+  border-color: var(--color-primary-dark);
+  box-shadow: 0 0 0 1px var(--color-primary-dark);
 }
 
 .photo-tile-label {
   font-size: 12px;
-  color: var(--ink-muted);
+  color: var(--color-ink-muted);
 }
 
 .photo-tile-actions {
@@ -609,9 +661,9 @@ tr:last-child td {
 .photo-empty {
   padding: 22px;
   text-align: center;
-  border: 1px dashed var(--line);
+  border: 1px dashed var(--color-line);
   border-radius: 8px;
-  color: var(--ink-muted);
+  color: var(--color-ink-muted);
   font-size: 13.5px;
 }
 
@@ -625,7 +677,7 @@ tr:last-child td {
     grid-template-columns: auto 1fr;
     gap: 4px 12px;
     padding: 14px 16px;
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid var(--color-line);
   }
   .products-table td {
     padding: 0;
@@ -636,7 +688,7 @@ tr:last-child td {
   }
   .products-table td[data-label]::before {
     content: attr(data-label) ': ';
-    color: var(--ink-muted);
+    color: var(--color-ink-muted);
     font-size: 12px;
   }
   .products-table td.row-actions {
@@ -660,7 +712,7 @@ tr:last-child td {
 /* "عرض الكل" / "عرض أقل" under a panel's list (pages/B2BPage.tsx). */
 .panel-foot {
   padding: 12px 22px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--color-line);
   text-align: center;
 }
 
@@ -675,7 +727,7 @@ tr:last-child td {
 
 .detail-grid dt {
   font-size: 12px;
-  color: var(--ink-muted);
+  color: var(--color-ink-muted);
   margin-bottom: 3px;
 }
 
@@ -687,7 +739,7 @@ tr:last-child td {
 
 .detail-heading {
   font-size: 15px;
-  color: var(--forest-deep);
+  color: var(--color-ink);
   margin: 0 0 8px;
 }
 
@@ -695,7 +747,7 @@ tr:last-child td {
   list-style: none;
   margin: 0;
   padding: 0;
-  border: 1px solid var(--line);
+  border: 1px solid var(--color-line);
   border-radius: 8px;
 }
 
@@ -706,7 +758,7 @@ tr:last-child td {
   justify-content: space-between;
   gap: 8px 12px;
   padding: 10px 12px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--color-line);
   font-size: 13.5px;
   overflow-wrap: anywhere;
 }

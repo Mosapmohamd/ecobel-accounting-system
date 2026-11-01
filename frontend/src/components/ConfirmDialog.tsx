@@ -41,7 +41,7 @@ function ConfirmPanel({ title, message, confirmLabel, cancelLabel = 'رجوع', 
       >
         <h2 id={`${id}-title`}>{title}</h2>
         {message && (
-          <p id={`${id}-msg`} style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--ink)' }}>
+          <p id={`${id}-msg`} style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--color-ink)' }}>
             {message}
           </p>
         )}

@@ -25,13 +25,13 @@ function PhotoFrame({ src, alt, size }: { src: string | null; alt: string; size:
       style={{
         width: size, height: typeof size === 'number' ? size : undefined, aspectRatio: '1', borderRadius: 8,
         overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'var(--parchment-2)', border: '1px solid var(--line)',
+        background: 'var(--color-surface-muted)', border: '1px solid var(--color-line)',
       }}
     >
       {src ? (
         <img src={src} alt={alt} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
-        <span style={{ fontSize: small ? 9 : 13, color: 'var(--ink-muted)' }}>{small ? '+ صورة' : 'مفيش صورة'}</span>
+        <span style={{ fontSize: small ? 9 : 13, color: 'var(--color-ink-muted)' }}>{small ? '+ صورة' : 'مفيش صورة'}</span>
       )}
     </div>
   );
@@ -211,7 +211,7 @@ export function ProductPhotos({
   return (
     <div>
       {confirmDialog.dialog}
-      <p style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--ink-muted)', margin: '0 0 12px' }}>
+      <p style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--color-ink-muted)', margin: '0 0 12px' }}>
         JPG أو PNG أو WEBP، حتى 5 ميجا للصورة، وأقل ضلع 200 بكسل. صورة رئيسية وحتى {MAX_EXTRA_PHOTOS.toLocaleString('ar-EG')} صور إضافية.
         الأفضل صور مربعة بخلفية فاتحة. أي تغيير في الصور بيتحفظ على طول.
       </p>
@@ -255,7 +255,7 @@ export function ProductPhotos({
         </ul>
       )}
 
-      {status && <p role="status" style={{ fontSize: 13, color: 'var(--forest)', margin: '12px 0 0' }}>{status}</p>}
+      {status && <p role="status" style={{ fontSize: 13, color: 'var(--color-primary-ink)', margin: '12px 0 0' }}>{status}</p>}
       {errors.length > 0 && (
         <div role="alert" className="error-banner" style={{ marginTop: 12, marginBottom: 0 }}>
           {errors.length === 1 ? errors[0] : <ul style={{ margin: 0, paddingInlineStart: 18 }}>{errors.map((e) => <li key={e}>{e}</li>)}</ul>}
@@ -268,7 +268,7 @@ export function ProductPhotos({
         <button type="button" className="btn btn-primary" disabled={busy || remaining <= 0} onClick={() => openPicker(addRef.current)}>
           {busy && status ? 'جاري الرفع...' : tiles.length === 0 ? 'إضافة صور' : 'إضافة صور أخرى'}
         </button>
-        {remaining <= 0 && <span style={{ fontSize: 12.5, color: 'var(--ink-muted)', marginInlineStart: 10 }}>وصلت للحد الأقصى للصور</span>}
+        {remaining <= 0 && <span style={{ fontSize: 12.5, color: 'var(--color-ink-muted)', marginInlineStart: 10 }}>وصلت للحد الأقصى للصور</span>}
       </div>
     </div>
   );

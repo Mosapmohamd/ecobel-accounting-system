@@ -5,10 +5,10 @@ const money = (n: number) => `${n.toLocaleString('ar-EG')} ج.م`;
 const when = (iso: string) => new Date(iso).toLocaleString('ar-EG');
 
 const statusMark: Record<StorefrontCheck['checks'][number]['status'], { icon: string; color: string }> = {
-  ok: { icon: '✓', color: 'var(--ok-strong)' },
-  warn: { icon: '!', color: 'var(--ink)' },
-  fail: { icon: '✕', color: 'var(--rose-text)' },
-  info: { icon: 'i', color: 'var(--ink-muted)' },
+  ok: { icon: '✓', color: 'var(--color-success-strong)' },
+  warn: { icon: '!', color: 'var(--color-warning)' },
+  fail: { icon: '✕', color: 'var(--color-error)' },
+  info: { icon: 'i', color: 'var(--color-info)' },
 };
 
 /** Settings → Integrations: what can be VERIFIED about the storefront's Meta
@@ -46,12 +46,12 @@ export default function IntegrationsPage() {
   const check = data.last_check;
   const pe = data.purchase_eligible;
   const pixelState = !check
-    ? { label: 'لسه ما اتفحصش', tone: 'var(--ink-muted)' }
+    ? { label: 'لسه ما اتفحصش', tone: 'var(--color-ink-muted)' }
     : check.pixel_id
-      ? { label: `شغّال على المتجر — ${check.pixel_id}`, tone: 'var(--ok-strong)' }
+      ? { label: `شغّال على المتجر — ${check.pixel_id}`, tone: 'var(--color-success-strong)' }
       : check.reachable
-        ? { label: 'مقفول على المتجر (مفيش Pixel ID)', tone: 'var(--ink)' }
-        : { label: 'المتجر مش متاح للفحص', tone: 'var(--rose-text)' };
+        ? { label: 'مقفول على المتجر (مفيش Pixel ID)', tone: 'var(--color-ink)' }
+        : { label: 'المتجر مش متاح للفحص', tone: 'var(--color-error)' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -59,7 +59,7 @@ export default function IntegrationsPage() {
         <div className="panel-head">
           <div>
             <h2>Meta Pixel</h2>
-            <div className="sub" style={{ fontSize: 12.5, color: 'var(--ink-muted)', marginTop: 2 }}>
+            <div className="sub" style={{ fontSize: 12.5, color: 'var(--color-ink-muted)', marginTop: 2 }}>
               تتبع إعلانات Meta على المتجر الجديد. الصفحة دي بتعرض اللي نقدر نتأكد منه بس — تقارير الإعلانات الكاملة في Meta.
             </div>
           </div>
@@ -72,7 +72,7 @@ export default function IntegrationsPage() {
           <div className="kpi-card">
             <div className="label">حالة الـ Pixel على المتجر</div>
             <div className="value" style={{ fontSize: 16, color: pixelState.tone }}>{pixelState.label}</div>
-            {check && <div style={{ fontSize: 12, color: 'var(--ink-muted)', marginTop: 4 }}>آخر فحص: {when(check.checked_at)}</div>}
+            {check && <div style={{ fontSize: 12, color: 'var(--color-ink-muted)', marginTop: 4 }}>آخر فحص: {when(check.checked_at)}</div>}
           </div>
           <div className="kpi-card">
             <div className="label">عنوان المتجر اللي بيتفحص</div>
@@ -80,11 +80,11 @@ export default function IntegrationsPage() {
           </div>
           <div className="kpi-card" title="أحداث المتصفح بتروح من متصفح العميلة لـ Meta على طول — السيستم ده مش بيشوفها">
             <div className="label">أحداث اتبعتت من المتصفح</div>
-            <div className="value" style={{ fontSize: 16, color: 'var(--ink-muted)' }}>مش بتتقاس هنا</div>
+            <div className="value" style={{ fontSize: 16, color: 'var(--color-ink-muted)' }}>مش بتتقاس هنا</div>
           </div>
           <div className="kpi-card" title="محتاج Meta API بتوكن — مش متظبط">
             <div className="label">أحداث وصلت لـ Meta فعلاً</div>
-            <div className="value" style={{ fontSize: 16, color: 'var(--ink-muted)' }}>في Events Manager بس</div>
+            <div className="value" style={{ fontSize: 16, color: 'var(--color-ink-muted)' }}>في Events Manager بس</div>
           </div>
         </div>
       </div>
@@ -93,7 +93,7 @@ export default function IntegrationsPage() {
         <div className="panel-head">
           <div>
             <h2>طلبات مؤهلة لحدث Purchase</h2>
-            <div className="sub" style={{ fontSize: 12.5, color: 'var(--ink-muted)', marginTop: 2 }}>
+            <div className="sub" style={{ fontSize: 12.5, color: 'var(--color-ink-muted)', marginTop: 2 }}>
               من قاعدة البيانات: طلبات اتسلّمت ودفع عند الاستلام (مكتملة ومدفوعة). ده عدد الطلبات اللي تستاهل Purchase —
               مش عدد الأحداث اللي Meta استلمتها.
             </div>
@@ -103,18 +103,18 @@ export default function IntegrationsPage() {
           <div className="kpi-card">
             <div className="label">آخر 7 أيام</div>
             <div className="value">{pe.last_7_days.orders.toLocaleString('ar-EG')} طلب</div>
-            <div style={{ fontSize: 12, color: 'var(--ink-muted)', marginTop: 4 }}>{money(pe.last_7_days.value)}</div>
+            <div style={{ fontSize: 12, color: 'var(--color-ink-muted)', marginTop: 4 }}>{money(pe.last_7_days.value)}</div>
           </div>
           <div className="kpi-card">
             <div className="label">آخر 30 يوم</div>
             <div className="value">{pe.last_30_days.orders.toLocaleString('ar-EG')} طلب</div>
-            <div style={{ fontSize: 12, color: 'var(--ink-muted)', marginTop: 4 }}>{money(pe.last_30_days.value)}</div>
+            <div style={{ fontSize: 12, color: 'var(--color-ink-muted)', marginTop: 4 }}>{money(pe.last_30_days.value)}</div>
           </div>
           <div className="kpi-card">
             <div className="label">آخر توصيل</div>
             <div className="value" style={{ fontSize: 15 }}>{pe.last_delivered_at ? when(pe.last_delivered_at) : '—'}</div>
             {pe.undated > 0 && (
-              <div style={{ fontSize: 12, color: 'var(--ink-muted)', marginTop: 4 }}>
+              <div style={{ fontSize: 12, color: 'var(--color-ink-muted)', marginTop: 4 }}>
                 {pe.undated} طلب اتسلّم قبل سجل الحالات — متأرخ بآخر تعديل عليه
               </div>
             )}
@@ -143,7 +143,7 @@ export default function IntegrationsPage() {
               <tr key={e.name}>
                 <td dir="ltr" style={{ fontWeight: 600, textAlign: 'start' }}>{e.name}</td>
                 <td>{e.trigger}</td>
-                <td style={{ color: 'var(--ink-muted)', fontSize: 12.5 }}>
+                <td style={{ color: 'var(--color-ink-muted)', fontSize: 12.5 }}>
                   {e.server_side_data ? 'الطلبات المؤهلة (فوق)' : 'مفيش — من المتصفح لـ Meta على طول'}
                 </td>
               </tr>
@@ -156,7 +156,7 @@ export default function IntegrationsPage() {
         <div className="panel-head">
           <div>
             <h2>فحص وتشخيص</h2>
-            <div className="sub" style={{ fontSize: 12.5, color: 'var(--ink-muted)', marginTop: 2 }}>
+            <div className="sub" style={{ fontSize: 12.5, color: 'var(--color-ink-muted)', marginTop: 2 }}>
               بيفتح الصفحة الرئيسية للمتجر مرة واحدة ويتأكد من الـ Pixel ID وإعدادات الأمان. مش بيبعت أي حدث لـ Meta.
             </div>
           </div>

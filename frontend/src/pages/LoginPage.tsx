@@ -31,13 +31,13 @@ export default function LoginPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, var(--forest) 0%, var(--forest-deep) 100%)',
+        background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)',
       }}
     >
       <form
         onSubmit={handleSubmit}
         style={{
-          background: 'var(--cream)',
+          background: 'var(--color-surface)',
           borderRadius: 12,
           padding: '40px 36px',
           width: '100%',
@@ -46,7 +46,7 @@ export default function LoginPage() {
       >
         <div style={{ marginBottom: 28, textAlign: 'center' }}>
           <img src="/logo/ecobel-mark-black.png" alt="Eco Bel" style={{ height: 48, width: 'auto', marginBottom: 12 }} />
-          <h1 style={{ fontSize: 26, color: 'var(--forest-deep)' }}>سيستم الحسابات والمخزون</h1>
+          <h1 style={{ fontSize: 26, color: 'var(--color-ink)' }}>سيستم الحسابات والمخزون</h1>
         </div>
 
         {error && <div className="error-banner">{error}</div>}

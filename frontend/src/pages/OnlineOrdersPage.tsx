@@ -91,7 +91,7 @@ export default function OnlineOrdersPage() {
         <div className="panel-head">
           <div>
             <h2>طلبات الموقع</h2>
-            <div className="sub" style={{ fontSize: 12.5, color: 'var(--ink-muted)', marginTop: 2 }}>
+            <div className="sub" style={{ fontSize: 12.5, color: 'var(--color-ink-muted)', marginTop: 2 }}>
               طلبات العملاء من الموقع الإلكتروني (كاش عند الاستلام)
             </div>
           </div>
@@ -101,7 +101,7 @@ export default function OnlineOrdersPage() {
           <button
             className="btn"
             onClick={() => setStatusFilter('')}
-            style={{ background: statusFilter === '' ? 'var(--forest)' : 'var(--parchment-2)', color: statusFilter === '' ? 'var(--cream)' : 'var(--forest)' }}
+            style={{ background: statusFilter === '' ? 'var(--color-primary)' : 'var(--color-surface-muted)', color: statusFilter === '' ? 'var(--color-on-primary)' : 'var(--color-primary-ink)' }}
           >
             الكل
           </button>
@@ -110,7 +110,7 @@ export default function OnlineOrdersPage() {
               key={s}
               className="btn"
               onClick={() => setStatusFilter(s)}
-              style={{ background: statusFilter === s ? 'var(--forest)' : 'var(--parchment-2)', color: statusFilter === s ? 'var(--cream)' : 'var(--forest)' }}
+              style={{ background: statusFilter === s ? 'var(--color-primary)' : 'var(--color-surface-muted)', color: statusFilter === s ? 'var(--color-on-primary)' : 'var(--color-primary-ink)' }}
             >
               {statusLabel[s]}
             </button>
@@ -143,13 +143,13 @@ export default function OnlineOrdersPage() {
                     <td>
                       {o.customer_name}
                       <br />
-                      <span dir="ltr" style={{ color: 'var(--ink-muted)', fontSize: 12 }}>{o.customer_phone}</span>
+                      <span dir="ltr" style={{ color: 'var(--color-ink-muted)', fontSize: 12 }}>{o.customer_phone}</span>
                     </td>
                     <td>{o.total_amount.toLocaleString('ar-EG')} ج.م</td>
                     <td>{statusLabel[o.status]}</td>
                     <td>
                       {o.next_statuses.length === 0 ? (
-                        <span style={{ color: 'var(--ink-muted)', fontSize: 12.5 }}>— (حالة نهائية)</span>
+                        <span style={{ color: 'var(--color-ink-muted)', fontSize: 12.5 }}>— (حالة نهائية)</span>
                       ) : (
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                           <select
@@ -192,7 +192,7 @@ export default function OnlineOrdersPage() {
                   </tr>
                   {expanded === o.id && (
                     <tr>
-                      <td colSpan={6} style={{ background: 'var(--parchment)' }}>
+                      <td colSpan={6} style={{ background: 'var(--color-surface-tint)' }}>
                         <div style={{ padding: 12, fontSize: 13.5 }}>
                           <div style={{ marginBottom: 8 }}>
                             <strong>العنوان:</strong> {o.shipping_address}
@@ -210,14 +210,14 @@ export default function OnlineOrdersPage() {
                               </div>
                             ))}
                           </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: 'var(--ink-muted)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: 'var(--color-ink-muted)' }}>
                             <span>الإجمالي الفرعي: {o.subtotal.toLocaleString('ar-EG')} ج.م</span>
                             {o.promotion_discount > 0 && <span>خصم العروض: -{o.promotion_discount.toLocaleString('ar-EG')} ج.م</span>}
                             {o.discount_amount > 0 && <span>الخصم: -{o.discount_amount.toLocaleString('ar-EG')} ج.م</span>}
                             <span>الشحن: {o.shipping_fee === 0 ? 'مجاني' : `${o.shipping_fee} ج.م`}</span>
                           </div>
                           {o.applied_promotions.length > 0 && (
-                            <div style={{ fontSize: 12.5, color: 'var(--ink-muted)', marginTop: 6 }}>
+                            <div style={{ fontSize: 12.5, color: 'var(--color-ink-muted)', marginTop: 6 }}>
                               العروض المطبّقة:{' '}
                               {o.applied_promotions.map((p) => (
                                 `${p.name} (${p.shipping_discount > 0 ? `شحن مجاني -${p.shipping_discount.toLocaleString('ar-EG')}` : `-${p.discount.toLocaleString('ar-EG')}`} ج.م)`
@@ -230,11 +230,11 @@ export default function OnlineOrdersPage() {
                             {history[o.id] === undefined ? (
                               'جاري التحميل...'
                             ) : history[o.id] === 'error' ? (
-                              <span style={{ color: 'var(--rose-text)' }}>تعذر تحميل السجل</span>
+                              <span style={{ color: 'var(--color-error)' }}>تعذر تحميل السجل</span>
                             ) : (history[o.id] as OrderStatusChange[]).length === 0 ? (
-                              <span style={{ color: 'var(--ink-muted)' }}>مفيش تغييرات مسجّلة</span>
+                              <span style={{ color: 'var(--color-ink-muted)' }}>مفيش تغييرات مسجّلة</span>
                             ) : (
-                              <ul style={{ margin: '4px 0 0', paddingInlineStart: 18, color: 'var(--ink-muted)' }}>
+                              <ul style={{ margin: '4px 0 0', paddingInlineStart: 18, color: 'var(--color-ink-muted)' }}>
                                 {(history[o.id] as OrderStatusChange[]).map((h) => (
                                   <li key={h.created_at + h.to_status}>
                                     {new Date(h.created_at).toLocaleString('ar-EG')} — {statusLabel[h.from_status]} ← {statusLabel[h.to_status]} — {h.changed_by}

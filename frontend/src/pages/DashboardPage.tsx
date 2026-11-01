@@ -49,8 +49,8 @@ export default function DashboardPage() {
             className="btn"
             onClick={() => setPeriod(p.value)}
             style={{
-              background: period === p.value ? 'var(--forest)' : 'var(--parchment-2)',
-              color: period === p.value ? 'var(--cream)' : 'var(--forest)',
+              background: period === p.value ? 'var(--color-primary)' : 'var(--color-surface-muted)',
+              color: period === p.value ? 'var(--color-on-primary)' : 'var(--color-primary-ink)',
             }}
           >
             {p.label}
@@ -68,7 +68,7 @@ export default function DashboardPage() {
             <div className="kpi-card" title="طلبات الموقع اللي اتسلّمت واتحصّلت (دفع عند الاستلام) بس — اللي لسه ما اتسلّمتش أو اتلغت، وأوردرات الجملة، مش محسوبة">
               <div className="label">إيراد المبيعات {periodNoun(period)}</div>
               <div className="value">{money(summary.period_revenue)}</div>
-              <div style={{ fontSize: 12, color: 'var(--ink-muted)', marginTop: 4 }}>
+              <div style={{ fontSize: 12, color: 'var(--color-ink-muted)', marginTop: 4 }}>
                 طلبات الموقع المكتملة والمدفوعة
                 {summary.period_returns > 0 && <> · بعد خصم مرتجعات {money(summary.period_returns)}</>}
                 {summary.period_other_income > 0 && <> · إيرادات أخرى {money(summary.period_other_income)}</>}
@@ -80,7 +80,7 @@ export default function DashboardPage() {
             </div>
             <div className="kpi-card" title="مبيعات الجملة المسجّلة — مش محسوبة في الإيراد لحد ما يبقى للأوردرات حالة تسليم ودفع">
               <div className="label">مبيعات الجملة B2B (خارج الإيراد)</div>
-              <div className="value" style={{ color: 'var(--ok-strong)' }}>{money(summary.period_b2b_sales)}</div>
+              <div className="value" style={{ color: 'var(--color-success-strong)' }}>{money(summary.period_b2b_sales)}</div>
             </div>
             <div className="kpi-card">
               <div className="label">منتجات محتاجة انتباه</div>
@@ -99,7 +99,7 @@ export default function DashboardPage() {
             </div>
             <div className="kpi-card">
               <div className="label">قطع موزَّعة مجانًا {periodNoun(period)}</div>
-              <div className="value" style={{ color: 'var(--rose-text)' }}>{summary.free_distribution_pieces}</div>
+              <div className="value" style={{ color: 'var(--color-error)' }}>{summary.free_distribution_pieces}</div>
             </div>
           </div>
 
@@ -110,10 +110,10 @@ export default function DashboardPage() {
             <div className="panel-body" style={{ height: 260 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={monthly}>
-                  <XAxis dataKey="month" stroke="var(--ink-muted)" fontSize={12} />
-                  <YAxis stroke="var(--ink-muted)" fontSize={12} />
+                  <XAxis dataKey="month" stroke="var(--color-ink-muted)" fontSize={12} />
+                  <YAxis stroke="var(--color-ink-muted)" fontSize={12} />
                   <Tooltip formatter={(v) => money(Number(v))} />
-                  <Bar dataKey="total" fill="var(--forest)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="total" fill="var(--color-chart-1)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

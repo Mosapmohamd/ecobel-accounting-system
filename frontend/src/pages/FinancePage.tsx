@@ -31,7 +31,7 @@ export default function FinancePage() {
             key={t.key}
             className="btn"
             onClick={() => setTab(t.key)}
-            style={{ background: tab === t.key ? 'var(--forest)' : 'var(--parchment-2)', color: tab === t.key ? 'var(--cream)' : 'var(--forest)' }}
+            style={{ background: tab === t.key ? 'var(--color-primary)' : 'var(--color-surface-muted)', color: tab === t.key ? 'var(--color-on-primary)' : 'var(--color-primary-ink)' }}
           >
             {t.label}
           </button>
@@ -41,11 +41,11 @@ export default function FinancePage() {
       <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
         <div className="kpi-card">
           <div className="label" title="مجموع قيود الإيراد المعروضة — إيراد المبيعات (المكتملة والمدفوعة بس) في لوحة التحكم">إجمالي قيود الإيراد</div>
-          <div className="value" style={{ color: 'var(--ok-strong)' }}>{totalIncome.toLocaleString('ar-EG')} ج.م</div>
+          <div className="value" style={{ color: 'var(--color-success-strong)' }}>{totalIncome.toLocaleString('ar-EG')} ج.م</div>
         </div>
         <div className="kpi-card">
           <div className="label" title="بيشمل قيود عكس الإيراد (إلغاء طلبات)">إجمالي قيود المصروف</div>
-          <div className="value" style={{ color: 'var(--rose-text)' }}>{totalExpense.toLocaleString('ar-EG')} ج.م</div>
+          <div className="value" style={{ color: 'var(--color-error)' }}>{totalExpense.toLocaleString('ar-EG')} ج.م</div>
         </div>
         <div className="kpi-card">
           <div className="label">صافي القيود</div>
@@ -77,7 +77,7 @@ export default function FinancePage() {
                   </td>
                   <td>{e.category}</td>
                   <td>{e.description || '—'}</td>
-                  <td style={{ fontWeight: 700, color: e.type === 'income' ? 'var(--ok-strong)' : 'var(--rose-text)' }}>
+                  <td style={{ fontWeight: 700, color: e.type === 'income' ? 'var(--color-success-strong)' : 'var(--color-error)' }}>
                     {e.type === 'income' ? '+' : '-'}{e.amount.toLocaleString('ar-EG')} ج.م
                   </td>
                   <td>{new Date(e.entry_date).toLocaleDateString('ar-EG')}</td>

@@ -49,8 +49,8 @@ export default function SalesAnalyticsPage() {
             className="btn"
             onClick={() => setSource(s.value)}
             style={{
-              background: source === s.value ? 'var(--forest)' : 'var(--parchment-2)',
-              color: source === s.value ? 'var(--cream)' : 'var(--forest)',
+              background: source === s.value ? 'var(--color-primary)' : 'var(--color-surface-muted)',
+              color: source === s.value ? 'var(--color-on-primary)' : 'var(--color-primary-ink)',
             }}
           >
             {s.label}
@@ -77,7 +77,7 @@ export default function SalesAnalyticsPage() {
               <div className="kpi-card" title="اتخصمت من الإيراد (مش مصروفات)">
                 <div className="label">المرتجعات</div>
                 <div className="value">{money(data.returns_total)}</div>
-                <div style={{ fontSize: 12, color: 'var(--ink-muted)', marginTop: 4 }}>
+                <div style={{ fontSize: 12, color: 'var(--color-ink-muted)', marginTop: 4 }}>
                   مرتجع جزئي {data.partially_returned_orders} · مرتجع كامل {data.fully_returned_orders}
                 </div>
               </div>
@@ -103,10 +103,10 @@ export default function SalesAnalyticsPage() {
             <div className="panel-body" style={{ height: 260 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
-                  <XAxis dataKey="day" stroke="var(--ink-muted)" fontSize={11} />
-                  <YAxis stroke="var(--ink-muted)" fontSize={11} />
+                  <XAxis dataKey="day" stroke="var(--color-ink-muted)" fontSize={11} />
+                  <YAxis stroke="var(--color-ink-muted)" fontSize={11} />
                   <Tooltip formatter={(v) => money(Number(v))} />
-                  <Bar dataKey="total" fill="var(--forest)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="total" fill="var(--color-chart-1)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
