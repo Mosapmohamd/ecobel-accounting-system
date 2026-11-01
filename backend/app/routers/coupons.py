@@ -52,6 +52,11 @@ def update_coupon(coupon_id: str, payload: schemas.CouponUpdate, db: Session = D
         raise HTTPException(404, "الكوبون غير موجود")
 
     data = payload.model_dump(exclude_unset=True)
+    if (
+        coupon.discount_type == models.CouponDiscountType.percentage
+        and data.get("discount_value", coupon.discount_value) > 100
+    ):
+        raise HTTPException(400, "نسبة الخصم لازم تكون 100% أو أقل")
     limit_type = data.pop("limit_type", None)
     if limit_type == schemas.CouponLimitType.count:
         coupon.expires_at = None
@@ -87,8 +92,17 @@ def renew_coupon(coupon_id: str, db: Session = Depends(get_db)):
 
 @router.delete("/{coupon_id}", status_code=204)
 def delete_coupon(coupon_id: str, db: Session = Depends(get_db)):
-    coupon = db.get(models.Coupon, coupon_id)
+    """Only a coupon no order used can be deleted: orders keep pointing at
+    their coupon (order history, and a cancelled order gives its use back).
+    A used coupon is switched off instead (PATCH is_active: false)."""
+    coupon = db.query(models.Coupon).filter(models.Coupon.id == coupon_id).with_for_update().one_or_none()
     if not coupon:
         raise HTTPException(404, "الكوبون غير موجود")
+    orders = db.query(models.Order).filter(models.Order.coupon_id == coupon.id).count()
+    if orders:
+        raise HTTPException(
+            409,
+            f"الكوبون ده اتستخدم في {orders} طلب فمينفعش يتمسح — الطلبات دي محتاجاه في سجلها. وقّفيه بدل المسح.",
+        )
     db.delete(coupon)
     db.commit()

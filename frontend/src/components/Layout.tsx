@@ -10,6 +10,7 @@ const navItems = [
     group: 'المخزون والمبيعات',
     items: [
       { to: '/products', label: 'المنتجات والمخزون', icon: BoxIcon },
+      { to: '/categories', label: 'الفئات', icon: TagIcon },
       { to: '/b2b', label: 'مبيعات الجملة B2B', icon: CartIcon },
       { to: '/free-distribution', label: 'التوزيع المجاني', icon: GiftIcon },
     ],

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { routinesApi, productsApi, type Routine, type Product } from '../lib/api';
+import { apiErrorMessage, routinesApi, productsApi, type Routine, type Product } from '../lib/api';
 import { useConfirm } from '../lib/useConfirm';
 
 export default function RoutinesPage() {
@@ -46,8 +46,7 @@ export default function RoutinesPage() {
       setShowNew(false);
       load();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setError(msg || 'تعذر إضافة الروتين');
+      setError(apiErrorMessage(err, 'تعذر إضافة الروتين'));
     } finally {
       setSaving(false);
     }

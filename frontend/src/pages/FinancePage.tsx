@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { financeApi, type FinanceEntry, type FinanceEntryType, type FinanceSource } from '../lib/api';
+import { apiErrorMessage, financeApi, type FinanceEntry, type FinanceEntryType, type FinanceSource } from '../lib/api';
 import Modal from '../components/Modal';
 
 const TABS: { key: FinanceSource; label: string }[] = [
@@ -65,7 +65,7 @@ export default function FinancePage() {
         ) : (
           <table>
             <thead>
-              <tr><th>النوع</th><th>الفئة</th><th>الوصف</th><th>المبلغ</th><th>التاريخ</th></tr>
+              <tr><th>النوع</th><th>التسجيل</th><th>الفئة</th><th>الوصف</th><th>المبلغ</th><th>التاريخ</th></tr>
             </thead>
             <tbody>
               {entries.map((e) => (
@@ -74,6 +74,9 @@ export default function FinancePage() {
                     <span className={`status ${e.type === 'income' ? 'ok' : 'out'}`}>
                       {e.type === 'income' ? 'إيراد' : 'مصروف'}
                     </span>
+                  </td>
+                  <td title={e.is_manual ? 'قيد اتسجّل بإيد الفريق' : 'قيد اتسجّل تلقائيًا من طلب'}>
+                    <span className="pill">{e.is_manual ? 'يدوي' : 'تلقائي'}</span>
                   </td>
                   <td>{e.category}</td>
                   <td>{e.description || '—'}</td>
@@ -119,8 +122,8 @@ function NewEntryModal({
     try {
       await financeApi.create({ type, category, amount: Number(amount) || 0, description, source });
       onCreated();
-    } catch {
-      setError('حصل خطأ أثناء إضافة القيد');
+    } catch (err) {
+      setError(apiErrorMessage(err, 'حصل خطأ أثناء إضافة القيد'));
     } finally {
       setSaving(false);
     }
@@ -146,9 +149,15 @@ function NewEntryModal({
               <option value="b2b">B2B</option>
             </select>
           </div>
+          {type === 'income' && source !== 'spending' && (
+            <p className="field-hint" style={{ gridColumn: '1 / -1', margin: 0 }}>
+              مبيعات طلبات {source === 'website' ? 'الموقع' : 'الجملة'} بتتسجل لوحدها من الطلبات. القيد اليدوي هنا بيتحسب
+              «إيرادات أخرى» في التقارير، مش مبيعات — فمبيعات الطلب مش هتتحسب مرتين.
+            </p>
+          )}
           <div className="field" style={{ gridColumn: '1 / -1' }}>
             <label>الفئة</label>
-            <input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="مواد خام، شحن، ..." required />
+            <input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="مواد خام، شحن، ..." maxLength={100} required />
           </div>
           <div className="field" style={{ gridColumn: '1 / -1' }}>
             <label>المبلغ (ج.م)</label>
